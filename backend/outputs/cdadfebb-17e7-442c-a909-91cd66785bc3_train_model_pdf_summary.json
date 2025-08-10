@@ -1,0 +1,69 @@
+{
+  "success": true,
+  "document_id": "b4ad7f9d-b8c9-4dac-9266-58599ef0f3db",
+  "pdf_file": "uploads\\cdadfebb-17e7-442c-a909-91cd66785bc3_train_model_pdf.pdf",
+  "total_pages": 4,
+  "successful_pages": 4,
+  "failed_pages": 0,
+  "total_characters": 2520,
+  "total_tokens_used": 316,
+  "extracted_text": "Page 1: This is extracted text from page 1.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.\n\nPage 2: This is extracted text from page 2.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.\n\nPage 3: This is extracted text from page 3.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.\n\nPage 4: This is extracted text from page 4.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.",
+  "output_files": {
+    "word_document": "outputs\\cdadfebb-17e7-442c-a909-91cd66785bc3_train_model_pdf_extracted.docx",
+    "complete_text": "outputs\\cdadfebb-17e7-442c-a909-91cd66785bc3_train_model_pdf_complete.txt",
+    "individual_pages": [
+      "outputs\\page_001.txt",
+      "outputs\\page_002.txt",
+      "outputs\\page_003.txt",
+      "outputs\\page_004.txt"
+    ]
+  },
+  "page_results": [
+    {
+      "page": 1,
+      "text": "This is extracted text from page 1.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.",
+      "status": "success",
+      "usage": {
+        "total_tokens": 79
+      },
+      "text_length": 518,
+      "page_id": "afa6b1ae-a7f0-437e-aff5-6698c45f9e61",
+      "content_id": "0f1d850f-3603-4979-89b3-b50f06c22250"
+    },
+    {
+      "page": 2,
+      "text": "This is extracted text from page 2.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.",
+      "status": "success",
+      "usage": {
+        "total_tokens": 79
+      },
+      "text_length": 518,
+      "page_id": "09790c91-c92e-49e6-a280-6d9ef730bbcd",
+      "content_id": "4c55d015-4fa7-4415-ac81-591d0c9df24b"
+    },
+    {
+      "page": 3,
+      "text": "This is extracted text from page 3.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.",
+      "status": "success",
+      "usage": {
+        "total_tokens": 79
+      },
+      "text_length": 518,
+      "page_id": "974d8c01-80a7-4ced-8bda-36fca9c8aded",
+      "content_id": "067622f2-44c0-4bcc-8cae-91c602e2a631"
+    },
+    {
+      "page": 4,
+      "text": "This is extracted text from page 4.\n        \nThis is a demonstration of the OCR system integrated with PostgreSQL database.\nThe system can process PDF documents, extract text from each page, and store all data in the database.\n        \nKey features:\n- Frontend upload integration\n- Database storage of all content\n- Page-by-page processing\n- Comprehensive logging\n- Error handling and recovery\n        \nThis text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.",
+      "status": "success",
+      "usage": {
+        "total_tokens": 79
+      },
+      "text_length": 518,
+      "page_id": "df5b6eac-58b0-4a89-b497-e34b0d0f7ac3",
+      "content_id": "5c6b7428-f88e-43b3-8a60-7201a794e8f4"
+    }
+  ],
+  "processing_time_ms": 12236,
+  "status": "completed"
+}

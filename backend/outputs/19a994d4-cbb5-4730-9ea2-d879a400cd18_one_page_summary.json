@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "document_id": "769869e3-3929-43a7-9a86-7b3ebc8c0fd2",
+  "pdf_file": "uploads\\19a994d4-cbb5-4730-9ea2-d879a400cd18_one_page.pdf",
+  "total_pages": 1,
+  "successful_pages": 1,
+  "failed_pages": 0,
+  "total_characters": 2873,
+  "total_tokens_used": 3793,
+  "extracted_text": "Page 1: THIS LEASE made on the date and between the parties stated in the Land Registry prescribed clauses\n\n1. **Definitions and interpretation**\n\n1.1 In this lease the following definitions shall apply:\n\n**Brown Land:** the land edged brown on the Plan which forms part of the Landlord\u2019s Property;\n\n**Building:** the glass reinforced plastic kiosk constructed or in the course of construction on the Demised Premises or other erection housing the Tenant\u2019s Electrical Plant and doors gates fences spouts gutters and pipes appertaining thereto which may be constructed on the Demised Premises during the Term;\n\n**Demised Easements:** the rights set out in Part 2 of the schedule;\n\n**Demised Premises:** the land described in Part 1 of the schedule hereto shown edged pink on the Plan which forms part of the Landlord\u2019s Property;\n\n**Electric Line:** has the meaning given in Section 64(1) of the Electricity Act 1989 including all communication cables used in connection with the Undertaking;\n\n**Electrical Plant:** has the meaning given in Section 64(1) of the Electricity Act 1989;\n\n**Estate Roads and Footpaths:** the whole or any part of any of the following, irrespective of whether it is a thoroughfare:\n\n(a) any highway, road, lane, footway, alley or passage;\n\n(b) any square or court; and\n\n(c) any land laid out as a way whether it is for the time being formed as a way or not, (including verges) so far as they lie within the Landlord\u2019s Property;\n\n**Group Company:** a company which is a member of the same group as the Tenant within the meaning of section 42 of the Landlord and Tenant Act 1954 and which also holds a licence granted under section 6(1)(c) of the Electricity Act 1989;\n\n**Landlord:** the party named as Landlord in the Land Registry prescribed clauses and shall include any person or body for the time being entitled to the reversion immediately expectant on the determination of the Term;\n\n**Landlord\u2019s Property:** the land contained within the Landlord\u2019s title number referred to in LR2.1;\n\n**Plan:** the plan labelled with drawing number 8500112218L TEMP, a copy of which is annexed to this lease;\n\n**Tenant:** the party named as Tenant in the Land Registry prescribed clauses and shall include its successors;\n\n**Term:** the term of years created by this lease;\n\n**Undertaking:** an electricity distribution business licensed under section 6(1)(c) of the Electricity Act 1989 carried on by the Tenant or any Group Company.\n\nand the following rules of interpretation shall apply:\n\n1.2 A reference to a statute or statutory provision includes any amendment, extension, or re-enactment of it and any subordinate legislation and all orders, notices, codes of practice and guidance for the time being in force made under it;\n\n24-Jul-20 76526816.4",
+  "output_files": {
+    "word_document": "outputs\\19a994d4-cbb5-4730-9ea2-d879a400cd18_one_page_extracted.docx",
+    "complete_text": "outputs\\19a994d4-cbb5-4730-9ea2-d879a400cd18_one_page_complete.txt",
+    "individual_pages": [
+      "outputs\\page_001.txt"
+    ]
+  },
+  "page_results": [
+    {
+      "page": 1,
+      "text": "THIS LEASE made on the date and between the parties stated in the Land Registry prescribed clauses\n\n1. **Definitions and interpretation**\n\n1.1 In this lease the following definitions shall apply:\n\n**Brown Land:** the land edged brown on the Plan which forms part of the Landlord\u2019s Property;\n\n**Building:** the glass reinforced plastic kiosk constructed or in the course of construction on the Demised Premises or other erection housing the Tenant\u2019s Electrical Plant and doors gates fences spouts gutters and pipes appertaining thereto which may be constructed on the Demised Premises during the Term;\n\n**Demised Easements:** the rights set out in Part 2 of the schedule;\n\n**Demised Premises:** the land described in Part 1 of the schedule hereto shown edged pink on the Plan which forms part of the Landlord\u2019s Property;\n\n**Electric Line:** has the meaning given in Section 64(1) of the Electricity Act 1989 including all communication cables used in connection with the Undertaking;\n\n**Electrical Plant:** has the meaning given in Section 64(1) of the Electricity Act 1989;\n\n**Estate Roads and Footpaths:** the whole or any part of any of the following, irrespective of whether it is a thoroughfare:\n\n(a) any highway, road, lane, footway, alley or passage;\n\n(b) any square or court; and\n\n(c) any land laid out as a way whether it is for the time being formed as a way or not, (including verges) so far as they lie within the Landlord\u2019s Property;\n\n**Group Company:** a company which is a member of the same group as the Tenant within the meaning of section 42 of the Landlord and Tenant Act 1954 and which also holds a licence granted under section 6(1)(c) of the Electricity Act 1989;\n\n**Landlord:** the party named as Landlord in the Land Registry prescribed clauses and shall include any person or body for the time being entitled to the reversion immediately expectant on the determination of the Term;\n\n**Landlord\u2019s Property:** the land contained within the Landlord\u2019s title number referred to in LR2.1;\n\n**Plan:** the plan labelled with drawing number 8500112218L TEMP, a copy of which is annexed to this lease;\n\n**Tenant:** the party named as Tenant in the Land Registry prescribed clauses and shall include its successors;\n\n**Term:** the term of years created by this lease;\n\n**Undertaking:** an electricity distribution business licensed under section 6(1)(c) of the Electricity Act 1989 carried on by the Tenant or any Group Company.\n\nand the following rules of interpretation shall apply:\n\n1.2 A reference to a statute or statutory provision includes any amendment, extension, or re-enactment of it and any subordinate legislation and all orders, notices, codes of practice and guidance for the time being in force made under it;\n\n24-Jul-20 76526816.4",
+      "status": "success",
+      "usage": {
+        "prompt_tokens": 3140,
+        "total_tokens": 3793,
+        "completion_tokens": 653
+      },
+      "text_length": 2761,
+      "page_id": "8b6857fa-4bee-4fe8-8499-6c04842e70b3",
+      "content_id": "1d9ad6af-1b97-4da7-9ad9-55922fb5b649"
+    }
+  ],
+  "processing_time_ms": 14989,
+  "status": "completed"
+}

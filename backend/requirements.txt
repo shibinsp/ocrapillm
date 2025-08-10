@@ -1,0 +1,16 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+aiofiles==23.2.1
+
+# OCR dependencies (from parent directory)
+# These should already be installed for the OCR engine
+# ollama
+# pdf2image
+# python-docx
+# Pillow
+# numpy
+# scipy
