@@ -10,6 +10,8 @@ from datetime import datetime
 from typing import List, Optional
 import shutil
 from pathlib import Path
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 # Import OCR engine class
 try:
@@ -63,6 +65,10 @@ OUTPUT_DIR = Path("outputs")
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Job storage for async OCR tasks (in production, use Redis or database)
+jobs = {}
+executor = ThreadPoolExecutor(max_workers=3)  # Limit concurrent OCR tasks
+
 @app.get("/")
 async def root():
     return {"message": "OCR AI Assistant API", "status": "running"}
@@ -102,15 +108,56 @@ async def health_check_db():
             "timestamp": datetime.now().isoformat()
         }
 
+async def process_ocr_task(task_id: str, file_path: str, filename: str):
+    """Background OCR processing function"""
+    try:
+        print(f"🔄 Starting OCR processing for task {task_id}")
+        jobs[task_id]['status'] = 'processing'
+        
+        if ocr_processor:
+            # Run OCR processing in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                executor,
+                lambda: ocr_processor.process_pdf_from_frontend(
+                    pdf_path=file_path,
+                    original_filename=filename,
+                    output_dir=str(OUTPUT_DIR)
+                )
+            )
+            
+            jobs[task_id]['status'] = 'completed'
+            jobs[task_id]['result'] = {
+                "document_id": result['document_id'],
+                "message": "Document processed successfully",
+                "status": result['status'],
+                "extracted_text": result['extracted_text'],
+                "pages": result['total_pages'],
+                "processing_time_ms": result['processing_time_ms']
+            }
+            print(f"✅ OCR processing completed for task {task_id}")
+        else:
+            jobs[task_id]['status'] = 'failed'
+            jobs[task_id]['error'] = 'OCR engine not available'
+            
+    except Exception as e:
+        print(f"❌ OCR processing failed for task {task_id}: {e}")
+        jobs[task_id]['status'] = 'failed'
+        jobs[task_id]['error'] = str(e)
+        # Clean up file if processing failed
+        if Path(file_path).exists():
+            Path(file_path).unlink()
+
 @app.post("/upload/")
 async def upload_document(file: UploadFile = File(...)):
-    """Upload and process a PDF document"""
+    """Upload document and start async OCR processing"""
     
     # Validate file type
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
-    # Generate unique document ID
+    # Generate unique task ID
+    task_id = f"task_{int(datetime.now().timestamp() * 1000)}"
     doc_id = str(uuid.uuid4())
     
     # Save uploaded file
@@ -120,39 +167,58 @@ async def upload_document(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        # Process the PDF using the OCR engine with database integration
-        if ocr_processor:
-            try:
-                result = ocr_processor.process_pdf_from_frontend(
-                    pdf_path=str(file_path),
-                    original_filename=file.filename,
-                    output_dir=str(OUTPUT_DIR)
-                )
-                
-                return {
-                    "document_id": result['document_id'],
-                    "message": "Document uploaded and processed successfully",
-                    "status": result['status'],
-                    "extracted_text": result['extracted_text'],
-                    "pages": result['total_pages'],
-                    "processing_time_ms": result['processing_time_ms']
-                }
-                
-            except Exception as e:
-                print(f"OCR processing error: {e}")
-                # Clean up file if processing failed
-                if file_path.exists():
-                    file_path.unlink()
-                raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
-        else:
-            # Fallback if OCR engine is not available
-            raise HTTPException(status_code=500, detail="OCR engine not available")
-            
+        # Initialize job status
+        jobs[task_id] = {
+            'status': 'uploaded',
+            'result': None,
+            'error': None,
+            'created_at': datetime.now().isoformat(),
+            'file_info': {
+                'filename': file.filename,
+                'size': file.size,
+                'doc_id': doc_id
+            }
+        }
+        
+        # Start OCR processing in background
+        asyncio.create_task(process_ocr_task(task_id, str(file_path), file.filename))
+        
+        # Immediately respond with task ID
+        return {
+            "task_id": task_id,
+            "message": "Document uploaded successfully. Processing started.",
+            "status": "uploaded"
+        }
+        
     except Exception as e:
-        # Clean up file if processing failed
+        # Clean up file if upload failed
         if file_path.exists():
             file_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload document: {str(e)}")
+
+@app.get("/task-status/{task_id}")
+async def get_task_status(task_id: str):
+    """Check the status of an OCR processing task"""
+    
+    if task_id not in jobs:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    job = jobs[task_id]
+    
+    response = {
+        "task_id": task_id,
+        "status": job['status'],
+        "created_at": job['created_at']
+    }
+    
+    if job['status'] == 'completed' and job['result']:
+        response['result'] = job['result']
+    elif job['status'] == 'failed' and job['error']:
+        response['error'] = job['error']
+    elif job['status'] in ['uploaded', 'processing']:
+        response['message'] = f"Task is {job['status']}..."
+    
+    return response
 
 def simulate_ocr_processing(file_path: Path) -> str:
     """Simulate OCR processing - replace with actual OCR engine integration"""
