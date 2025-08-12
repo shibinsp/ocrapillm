@@ -1,0 +1,41 @@
+
+
+==================================================
+PAGE 1
+==================================================
+
+# LAND REGISTRY PRESCRIBED CLAUSES
+
+| LR1. Date of lease | 11 December 2020 |
+|-------------------|------------------|
+| LR2. Title number(s) | LR2.1 Landlord's title number(s) |
+|-------------------|------------------|
+| AGL308803 |
+| LR2.2 Other title numbers |
+|-------------------|------------------|
+| LR3. Parties to this lease | Landlord |
+|-------------------|------------------|
+| St William Homes LLP (company no. OC396332) whose registered office is at Berkeley House, 19 Portsmouth Road, Cobham, Surrey KT11 1JG |
+| Tenant |
+|-------------------|------------------|
+| London Power Networks plc (company no. 3929195) whose registered office is at Newington House, 237 Southwark Bridge Road, London SE1 6NP |
+| LR4. Property | In the case of a conflict between this clause and the remainder of this lease, then, for the purposes of registration, this clause shall prevail. |
+|-------------------|------------------|
+| As defined in the particulars of this lease and defined in this lease as "the Demised Premises". |
+| LR5. Prescribed statements etc | LR5.1 Statements prescribed under rules 179 (dispositions in favour of a charity), 180 (dispositions by a charity), or 198 (leases under the Leasehold Reform, Housing and Urban Development Act 1985) of the Land Registration Rules 2003 |
+|-------------------|------------------|
+| None |
+| LR5.2 This lease is made under, or by reference to, provisions of: |
+|-------------------|------------------|
+| None |
+| LR6. Term for which the Property is leased | The Term as specified in this lease at clause 2 |
+|-------------------|------------------|
+| LR7. Premium | One Pound (£1.00) |
+|-------------------|------------------|
+| LR8. Prohibitions or restrictions on disposing of this lease | This lease contains a provision that prohibits or restricts dispositions. |
+|-------------------|------------------|
+| LR9. Rights of acquisition etc | LR9.1 Tenant's contractual rights to renew this lease, to acquire the reversion or another lease of the Property, or to acquire an interest in other land |
+|-------------------|------------------|
+| None |
+
+24-Jul-20 76526816.4

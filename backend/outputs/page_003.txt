@@ -1,13 +1,17 @@
-This is extracted text from page 3.
-        
-This is a demonstration of the OCR system integrated with PostgreSQL database.
-The system can process PDF documents, extract text from each page, and store all data in the database.
-        
-Key features:
-- Frontend upload integration
-- Database storage of all content
-- Page-by-page processing
-- Comprehensive logging
-- Error handling and recovery
-        
-This text would normally come from an actual OCR service like Mistral Pixtral API, Tesseract, or other OCR engines.
+```
+(a) The placing of 1 length of 185MM underground cable(s) for transmitting electricity at a frequency of 50 hertz and at a pressure of 480 volts and low voltage telephone and signalling cables such cable(s) to be in the approximate position indicated on the Plan.
+
+Length of cable(s) approximately 1.2 metres.
+
+THE parties hereto have set their hands the day and year first above written
+
+SIGNED BY
+(Grantor's Signature).................................
+
+(please also sign plan)
+
+SIGNED BY L Segust
+(Signature).................................
+
+For and on behalf of | South Eastern | Power Networks plc
+```

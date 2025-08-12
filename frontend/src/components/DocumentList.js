@@ -63,13 +63,10 @@ const DocumentList = () => {
 
   const loadDocumentContent = async (documentId) => {
     try {
-      // const content = await apiService.getDocumentContent(documentId);
-      // actions.setExtractedText(content.text);
-      
-      // For demo purposes
-      const mockContent = `This is the extracted text content for document ${documentId}. \n\nThe OCR process has successfully extracted all readable text from the PDF document, including:\n\n• Headers and titles\n• Body paragraphs\n• Tables and structured data\n• Footnotes and annotations\n\nYou can now edit this text, search through it, or ask our AI assistant questions about the content.`;
-      actions.setExtractedText(mockContent);
+      const content = await apiService.getDocumentContent(documentId);
+      actions.setExtractedText(content.text);
     } catch (error) {
+      console.error('Failed to load document content:', error);
       actions.showError('Failed to load document content');
     }
   };
@@ -89,18 +86,16 @@ const DocumentList = () => {
     }
   };
 
-  const handleExportDocument = async (document, format = 'txt') => {
+  const handleExportDocument = async (doc, format = 'txt') => {
     try {
-      // const blob = await apiService.exportDocument(document.id, format);
-      // downloadFile(blob, `${document.name.replace('.pdf', '')}.${format}`);
+      const blob = await apiService.exportDocument(doc.id, format);
+      const filename = `${doc.name.replace('.pdf', '')}.${format}`;
       
-      // For demo purposes
-      const content = `Exported content for ${document.name}`;
-      const blob = new Blob([content], { type: 'text/plain' });
+      // Use the downloadFile utility from api service
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${document.name.replace('.pdf', '')}.${format}`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -108,7 +103,8 @@ const DocumentList = () => {
       
       actions.showSuccess(`Document exported as ${format.toUpperCase()}`);
     } catch (error) {
-      actions.showError('Failed to export document');
+      console.error('Export error:', error);
+      actions.showError(`Failed to export document: ${error.message || 'Unknown error'}`);
     }
   };
 

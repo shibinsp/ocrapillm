@@ -434,14 +434,30 @@ async def get_document_content(doc_id: str):
         if not ocr_processor:
             raise HTTPException(status_code=500, detail="OCR processor not available")
             
-        # Get complete text from extracted_content
+        # Get complete text from extracted_content and document info
         conn = ocr_processor.get_db_connection()
         cursor = conn.cursor()
         
+        # First get document info
+        cursor.execute("""
+            SELECT total_pages 
+            FROM documents 
+            WHERE id = %s
+        """, (doc_id,))
+        
+        doc_result = cursor.fetchone()
+        if not doc_result:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        total_pages = doc_result[0]
+        
+        # Get complete text from extracted_content
         cursor.execute("""
             SELECT raw_text 
             FROM extracted_content 
-            WHERE document_id = %s AND content_type = 'complete_document'
+            WHERE document_id = %s AND metadata->>'content_type' = 'complete_document'
             ORDER BY created_at DESC
             LIMIT 1
         """, (doc_id,))
@@ -449,13 +465,26 @@ async def get_document_content(doc_id: str):
         result = cursor.fetchone()
         complete_text = result[0] if result else ""
         
+        # If no complete document found, try to get all page content
+        if not complete_text:
+            cursor.execute("""
+                SELECT raw_text 
+                FROM extracted_content 
+                WHERE document_id = %s AND page_id IS NOT NULL
+                ORDER BY metadata->>'page_number'
+            """, (doc_id,))
+            
+            page_results = cursor.fetchall()
+            if page_results:
+                complete_text = "\n\n".join([row[0] for row in page_results if row[0]])
+        
         cursor.close()
         conn.close()
         
         return {
             "id": doc_id,
             "text": complete_text,
-            "pages": document_data['document']['total_pages']
+            "pages": total_pages
         }
         
     except HTTPException:
@@ -851,38 +880,114 @@ async def delete_document(doc_id: str):
 @app.get("/documents/{doc_id}/export")
 async def export_document(doc_id: str, format: str = "txt"):
     """Export document in specified format"""
-    if doc_id not in documents_db:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    document = documents_db[doc_id]
-    
-    if format == "txt":
-        # Create text file
-        export_path = OUTPUT_DIR / f"{doc_id}_export.txt"
-        with open(export_path, "w", encoding="utf-8") as f:
-            f.write(document["extracted_text"])
+    try:
+        if not ocr_processor:
+            raise HTTPException(status_code=500, detail="OCR processor not available")
+            
+        # Get document info from database
+        conn = ocr_processor.get_db_connection()
+        cursor = conn.cursor()
         
-        return FileResponse(
-            path=export_path,
-            filename=f"{document['name'].replace('.pdf', '')}.txt",
-            media_type="text/plain"
-        )
-    
-    elif format == "docx":
-        # For demo purposes, return text file
-        # In production, you would create a proper DOCX file
-        export_path = OUTPUT_DIR / f"{doc_id}_export.txt"
-        with open(export_path, "w", encoding="utf-8") as f:
-            f.write(document["extracted_text"])
+        cursor.execute("""
+            SELECT original_filename, filename
+            FROM documents 
+            WHERE id = %s
+        """, (doc_id,))
         
-        return FileResponse(
-            path=export_path,
-            filename=f"{document['name'].replace('.pdf', '')}.docx",
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-    
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported export format")
+        doc_result = cursor.fetchone()
+        if not doc_result:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        original_filename, filename = doc_result
+        base_name = original_filename.replace('.pdf', '') if original_filename else filename.replace('.pdf', '')
+        
+        if format == "txt":
+            # Get complete text from database
+            cursor.execute("""
+                SELECT raw_text 
+                FROM extracted_content 
+                WHERE document_id = %s AND metadata->>'content_type' = 'complete_document'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (doc_id,))
+            
+            result = cursor.fetchone()
+            complete_text = result[0] if result else ""
+            
+            # If no complete document found, try to get all page content
+            if not complete_text:
+                cursor.execute("""
+                    SELECT raw_text 
+                    FROM extracted_content 
+                    WHERE document_id = %s AND page_id IS NOT NULL
+                    ORDER BY metadata->>'page_number'
+                """, (doc_id,))
+                
+                page_results = cursor.fetchall()
+                if page_results:
+                    complete_text = "\n\n".join([row[0] for row in page_results if row[0]])
+            
+            cursor.close()
+            conn.close()
+            
+            if not complete_text:
+                raise HTTPException(status_code=404, detail="No extracted text found for this document")
+            
+            # Create text file
+            export_path = OUTPUT_DIR / f"{doc_id}_export.txt"
+            with open(export_path, "w", encoding="utf-8") as f:
+                f.write(complete_text)
+            
+            return FileResponse(
+                path=export_path,
+                filename=f"{base_name}.txt",
+                media_type="text/plain"
+            )
+        
+        elif format == "docx":
+            cursor.close()
+            conn.close()
+            
+            # Look for existing DOCX file in outputs directory
+            # Try different possible naming patterns
+            possible_docx_files = [
+                OUTPUT_DIR / f"{doc_id}_{base_name}_extracted.docx",
+                OUTPUT_DIR / f"{doc_id}_{filename.replace('.pdf', '')}_extracted.docx",
+                OUTPUT_DIR / f"{filename.replace('.pdf', '')}_extracted.docx"
+            ]
+            
+            # Find existing DOCX file
+            docx_file = None
+            for possible_file in possible_docx_files:
+                if possible_file.exists():
+                    docx_file = possible_file
+                    break
+            
+            # If no existing DOCX found, look for any DOCX file with the doc_id
+            if not docx_file:
+                for file_path in OUTPUT_DIR.glob(f"*{doc_id}*.docx"):
+                    docx_file = file_path
+                    break
+            
+            if docx_file and docx_file.exists():
+                return FileResponse(
+                    path=docx_file,
+                    filename=f"{base_name}.docx",
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+            else:
+                raise HTTPException(status_code=404, detail="DOCX file not found. Document may not have been processed yet.")
+        
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported export format. Use 'txt' or 'docx'.")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error exporting document: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to export document: {str(e)}")
 
 @app.get("/documents/{doc_id}/pages")
 async def get_document_pages(doc_id: str):

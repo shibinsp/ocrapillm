@@ -1,0 +1,71 @@
+{
+  "success": true,
+  "document_id": "ea97cd4b-b2eb-4a3b-8207-4358b1fc42bd",
+  "pdf_file": "uploads\\77ba84b6-aec0-4775-91f1-431ab934ffb3_Wayleave - signed.pdf",
+  "total_pages": 4,
+  "successful_pages": 3,
+  "failed_pages": 1,
+  "total_characters": 3630,
+  "total_tokens_used": 10906,
+  "extracted_text": "Page 2: THE Company shall:-\n\n(a) Not cause any unnecessary damage or injury to the Property and shall take all reasonable precautions to avoid obstruction or interference with the use of any road or footpath sewer drain or watercourse that may be crossed by the Works\n\n(b) Make good to the reasonable satisfaction of the Grantor any damage caused by or arising out of the execution of the Works. If for any reason any such damage cannot be made good the Company shall compensate the Grantor in an amount which has previously been approved by the Company\n\n(c) Give to the Grantor not less than five days' previous notice (except in cases of emergency when as long notice as practicable shall be given) of the intended exercise of any of the rights conferred by Clause 2 above\n\n(d) Upon completion of this Agreement, pay the Grantor a one-off payment of \u00a30.00\n\n(e) At all times keep the Grantor indemnified against all losses, damages and expenses which he suffers or incurs by reason or on account of any breach of this Agreement including any negligent act or omission of the Company in connection with the execution or existence of the Works provided that this indemnity shall not extend to any such losses damages or expenses to the extent caused by the default of the Grantor\n\n4. THE GRANTOR'S COVENANTS\n\nTHE Grantor shall not:-\n\n(a) Do or cause or permit to be done on the Property anything likely to cause damage or interference of any kind to the Works\n\n(b) Make or cause or permit to be made any material alteration to the Property so as to interfere with or obstruct the access to the Works or so as to interfere with the support afforded to the Works by the surrounding soil without the prior written consent of the Company\n\n5. TERMINATION\n\nThis Agreement shall remain in force for a period of 15 years from the date hereof and thereafter until determined at the expiry of not less than twelve months' previous written notice given at any time by either party but without prejudice to the rights which the Company might exercise under the Electricity Act 1989\n\nTHE SCHEDULE\n\nPage 3: ```\n(a) The placing of 1 length of 185MM underground cable(s) for transmitting electricity at a frequency of 50 hertz and at a pressure of 480 volts and low voltage telephone and signalling cables such cable(s) to be in the approximate position indicated on the Plan.\n\nLength of cable(s) approximately 1.2 metres.\n\nTHE parties hereto have set their hands the day and year first above written\n\nSIGNED BY\n(Grantor's Signature).................\n(please also sign plan)\n\nSIGNED BY L Segust\n(Signature).................\nFor and on behalf of | South Eastern | Power Networks plc\n```\n\nPage 4: ```\nKey\nUKPN LV Cables\nUKPN LV Cables\n24 Hour Unrestricted Access Required\n\nLandowner Details\nBoxador Ltd\n24 Darwin Avenue\nChingford\nLondon\nE4 6JD\n\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\n",
+  "output_files": {
+    "word_document": "outputs\\77ba84b6-aec0-4775-91f1-431ab934ffb3_Wayleave - signed_extracted.docx",
+    "complete_text": "outputs\\77ba84b6-aec0-4775-91f1-431ab934ffb3_Wayleave - signed_complete.txt",
+    "individual_pages": [
+      "outputs\\page_001.txt",
+      "outputs\\page_002.txt",
+      "outputs\\page_003.txt",
+      "outputs\\page_004.txt"
+    ]
+  },
+  "page_results": [
+    {
+      "page": 1,
+      "text": "",
+      "status": "error",
+      "error": "API Error 503: Service unavailable.",
+      "page_id": "8184ea11-8ab7-4c1a-bc13-ba0b37e772d6"
+    },
+    {
+      "page": 2,
+      "text": "THE Company shall:-\n\n(a) Not cause any unnecessary damage or injury to the Property and shall take all reasonable precautions to avoid obstruction or interference with the use of any road or footpath sewer drain or watercourse that may be crossed by the Works\n\n(b) Make good to the reasonable satisfaction of the Grantor any damage caused by or arising out of the execution of the Works. If for any reason any such damage cannot be made good the Company shall compensate the Grantor in an amount which has previously been approved by the Company\n\n(c) Give to the Grantor not less than five days' previous notice (except in cases of emergency when as long notice as practicable shall be given) of the intended exercise of any of the rights conferred by Clause 2 above\n\n(d) Upon completion of this Agreement, pay the Grantor a one-off payment of \u00a30.00\n\n(e) At all times keep the Grantor indemnified against all losses, damages and expenses which he suffers or incurs by reason or on account of any breach of this Agreement including any negligent act or omission of the Company in connection with the execution or existence of the Works provided that this indemnity shall not extend to any such losses damages or expenses to the extent caused by the default of the Grantor\n\n4. THE GRANTOR'S COVENANTS\n\nTHE Grantor shall not:-\n\n(a) Do or cause or permit to be done on the Property anything likely to cause damage or interference of any kind to the Works\n\n(b) Make or cause or permit to be made any material alteration to the Property so as to interfere with or obstruct the access to the Works or so as to interfere with the support afforded to the Works by the surrounding soil without the prior written consent of the Company\n\n5. TERMINATION\n\nThis Agreement shall remain in force for a period of 15 years from the date hereof and thereafter until determined at the expiry of not less than twelve months' previous written notice given at any time by either party but without prejudice to the rights which the Company might exercise under the Electricity Act 1989\n\nTHE SCHEDULE",
+      "status": "success",
+      "usage": {
+        "prompt_tokens": 3396,
+        "total_tokens": 3831,
+        "completion_tokens": 435
+      },
+      "text_length": 2074,
+      "page_id": "b4062994-dbd0-40f1-971d-97cf65d3046b",
+      "content_id": "20b35f60-ae08-46e6-a324-efc7cd2bc2a0"
+    },
+    {
+      "page": 3,
+      "text": "```\n(a) The placing of 1 length of 185MM underground cable(s) for transmitting electricity at a frequency of 50 hertz and at a pressure of 480 volts and low voltage telephone and signalling cables such cable(s) to be in the approximate position indicated on the Plan.\n\nLength of cable(s) approximately 1.2 metres.\n\nTHE parties hereto have set their hands the day and year first above written\n\nSIGNED BY\n(Grantor's Signature).................\n(please also sign plan)\n\nSIGNED BY L Segust\n(Signature).................\nFor and on behalf of | South Eastern | Power Networks plc\n```",
+      "status": "success",
+      "usage": {
+        "prompt_tokens": 3396,
+        "total_tokens": 3536,
+        "completion_tokens": 140
+      },
+      "text_length": 576,
+      "page_id": "4fca6dbd-5cd9-4cc0-99ff-a3929e276532",
+      "content_id": "598dbb70-15fa-47de-91da-863ec9d2d8a7"
+    },
+    {
+      "page": 4,
+      "text": "```\nKey\nUKPN LV Cables\nUKPN LV Cables\n24 Hour Unrestricted Access Required\n\nLandowner Details\nBoxador Ltd\n24 Darwin Avenue\nChingford\nLondon\nE4 6JD\n\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\nEnergy Networks\n",
+      "status": "success",
+      "usage": {
+        "prompt_tokens": 3396,
+        "total_tokens": 3539,
+        "completion_tokens": 143
+      },
+      "text_length": 644,
+      "page_id": "f11d4b16-ea29-4c7e-8522-0b56d22b97f8",
+      "content_id": "518dedef-fde5-411e-b68e-20d007c2cd9d"
+    }
+  ],
+  "processing_time_ms": 52207,
+  "status": "completed"
+}

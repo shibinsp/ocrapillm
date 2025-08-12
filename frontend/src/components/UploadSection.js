@@ -62,41 +62,48 @@ const UploadSection = () => {
       // Start processing
       actions.setProcessing({
         isProcessing: true,
-        status: 'Converting PDF to images...',
-        progress: 0
+        status: 'Starting OCR processing...',
+        progress: 10
       });
       
-      // Simulate processing steps
-      const processingSteps = [
-        { status: 'Converting PDF to images...', progress: 20 },
-        { status: 'Detecting page types...', progress: 40 },
-        { status: 'Extracting text with OCR...', progress: 60 },
-        { status: 'Processing tables and diagrams...', progress: 80 },
-        { status: 'Finalizing document...', progress: 100 }
-      ];
+      // Poll for task completion and get real extracted text
+      const result = await apiService.pollTaskStatus(
+        response.task_id,
+        (status) => {
+          // Update processing status based on real backend progress
+          let progressPercent = 20;
+          let statusMessage = 'Processing document...';
+          
+          if (status.status === 'processing') {
+            progressPercent = 50;
+            statusMessage = 'Extracting text with OCR...';
+          } else if (status.status === 'completed') {
+            progressPercent = 100;
+            statusMessage = 'Processing complete!';
+          }
+          
+          actions.setProcessing({
+            isProcessing: status.status !== 'completed',
+            status: statusMessage,
+            progress: progressPercent
+          });
+        }
+      );
       
-      for (const step of processingSteps) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        actions.setProcessing({
-          isProcessing: true,
-          status: step.status,
-          progress: step.progress
-        });
-      }
-      
-      // Create document object
+      // Create document object with real extracted text
       const newDocument = {
-        id: response.document_id || Date.now().toString(),
+        id: result.document_id,
         name: selectedFile.name,
         size: selectedFile.size,
         status: 'completed',
         created_at: new Date().toISOString(),
-        pages: response.pages || 1,
-        extracted_text: response.extracted_text || ''
+        pages: result.pages || 1,
+        extracted_text: result.extracted_text || ''
       };
       
       // Add to documents and set as current
       actions.addDocument(newDocument);
+      actions.setCurrentDocument(newDocument);
       actions.setExtractedText(newDocument.extracted_text);
       
       // Reset states
