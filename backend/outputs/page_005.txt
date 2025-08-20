@@ -1,45 +1,37 @@
-THIS LEASE made on the date and between the parties stated in the Land Registry prescribed clauses
+```
+1.3 Any obligation on a party not to do something includes an obligation not to agree to or knowingly permit that thing to be done; and
 
-1. **Definitions and interpretation**
+1.4 Unless the context otherwise requires, where the words “include(s)” or “including” are used in this lease, they are deemed to have the words “without limitation” following them.
 
-1.1 In this lease the following definitions shall apply:
+2 Demise
 
-**Brown Land:** the land edged brown on the Plan which forms part of the Landlord’s Property;
+The Tenant has paid the Landlord ONE POUND (£1) on the date of this lease and agreed to enter into the covenants in this lease and in exchange for such valuable consideration the Landlord demises to the Tenant with full title guarantee all of the Demised Premises together with the Demised Easements which are granted for the benefit of the Demised Premises and the Undertaking and which may be exercised by the Tenant and all those authorised by it for the Term of 99 years from the date of this lease at an annual rent of a peppercorn (if demanded).
 
-**Building:** the glass reinforced plastic kiosk constructed or in the course of construction on the Demised Premises or other erection housing the Tenant’s Electrical Plant and doors gates fences spouts gutters and pipes appertaining thereto which may be constructed on the Demised Premises during the Term;
+3 Tenant’s Covenants
 
-**Demised Easements:** the rights set out in Part 2 of the schedule;
+3.1 The Tenant covenants with the Landlord that it will:
 
-**Demised Premises:** the land described in Part 1 of the schedule hereto shown edged pink on the Plan which forms part of the Landlord’s Property;
+3.1.1 pay the reserved rent (if demanded) without any deduction on 1 January in every year and the first payment to be made on the date of this lease;
 
-**Electric Line:** has the meaning given in Section 64(1) of the Electricity Act 1989 including all communication cables used in connection with the Undertaking;
+3.1.2 indemnify the Landlord against liability for any rates and taxes which may now or in the future be separately levied upon the Demised Premises provided that the Landlord gives the Tenant prompt notice in writing of:
 
-**Electrical Plant:** has the meaning given in Section 64(1) of the Electricity Act 1989;
+3.1.2.1 the receipt of any demand for such rates; and
 
-**Estate Roads and Footpaths:** the whole or any part of any of the following, irrespective of whether it is a thoroughfare:
+3.1.2.2 any proposal for the separate assessment of rates whether made by the Landlord or any third party;
 
-(a) any highway, road, lane, footway, alley or passage;
+3.1.3 not use the Demised Premises or the Building otherwise than for the purposes of an electrical transformer substation;
 
-(b) any square or court; and
+3.1.4 not assign underlet or part with or share the possession of the whole or any part of the Demised Premises except that the Tenant may without the consent of the Landlord:
 
-(c) any land laid out as a way whether it is for the time being formed as a way or not, (including verges) so far as they lie within the Landlord’s Property;
+3.1.4.1 assign or underlet the whole of the Demised Premises to any company or body to which the operation of the Undertaking is transferred; and
 
-**Group Company:** a company which is a member of the same group as the Tenant within the meaning of section 42 of the Landlord and Tenant Act 1954 and which also holds a licence granted under section 6(1)(c) of the Electricity Act 1989;
+3.1.4.2 share the occupation of the whole or any part of the Demised Premises with a company that is a Group Company for so long as the Group Company and there is no transfer or creation of a legal estate;
 
-**Landlord:** the party named as Landlord in the Land Registry prescribed clauses and shall include any person or body for the time being entitled to the reversion immediately expectant on the determination of the Term;
+3.1.5 only exercise the Demised Easements and carry out works under this lease in a proper and workmanlike manner so as not to cause any unnecessary damage to the Landlord’s Property. The Tenant will make good all damage caused by it or its servants or agents during the term of this lease and the Tenant’s own cost to the reasonable satisfaction of the Landlord;
 
-**Landlord’s Property:** the land contained within the Landlord’s title number referred to in LR2.1;
+3.1.6 keep the Demised Premises and Building in a clean and tidy condition and in tenantable repair and will replace or renew the Building or any part of it whenever necessary;
 
-**Plan:** the plan labelled with drawing number 8500112218L TEMP, a copy of which is annexed to this lease;
+3.1.7 comply with all relevant statutory requirements in relation to its occupation and use of the Demised Premises and the operation of the Electric Lines and the Electrical Plant;
 
-**Tenant:** the party named as Tenant in the Land Registry prescribed clauses and shall include its successors;
-
-**Term:** the term of years created by this lease;
-
-**Undertaking:** an electricity distribution business licensed under section 6(1)(c) of the Electricity Act 1989 carried on by the Tenant or any Group Company.
-
-and the following rules of interpretation shall apply:
-
-1.2 A reference to a statute or statutory provision includes any amendment, extension, or re-enactment of it and any subordinate legislation and all orders, notices, codes of practice and guidance for the time being in force made under it;
-
-24-Jul-20 76526816.4
+24-Jul-20 76528816.4
+```

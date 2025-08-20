@@ -21,10 +21,11 @@ A professional React.js frontend with FastAPI backend for OCR document processin
 - **Export Functionality**: Multiple export formats (TXT, DOCX)
 
 ### OCR Engine
-- **AI-Powered**: Uses Qwen2.5vl model for advanced text extraction
+- **AI-Powered**: Uses Mistral Pixtral API for advanced text extraction and document analysis
 - **Multi-format Support**: Handles text, tables, and diagrams
 - **High Accuracy**: Processes complex layouts and handwriting
 - **Batch Processing**: Efficient multi-page document handling
+- **Intelligent Chat**: Real-time document analysis with Mistral AI for accurate Q&A
 
 ## 🚀 Quick Start
 
@@ -32,7 +33,7 @@ A professional React.js frontend with FastAPI backend for OCR document processin
 
 - Node.js 16+ and npm
 - Python 3.8+
-- Ollama with Qwen2.5vl model
+- Mistral API key (for AI-powered document analysis)
 - Poppler (for PDF processing)
 
 ### Installation
@@ -54,13 +55,11 @@ A professional React.js frontend with FastAPI backend for OCR document processin
    pip install -r requirements.txt
    ```
 
-4. **Setup Ollama**
+4. **Setup Environment**
    ```bash
-   # Install Ollama (if not already installed)
-   # Download from: https://ollama.ai
-   
-   # Pull the Qwen2.5vl model
-   ollama pull qwen2.5vl
+   # The application uses Mistral API for AI functionality
+   # API key is already configured in the backend
+   # No additional setup required for AI features
    ```
 
 ### Running the Application
@@ -68,7 +67,7 @@ A professional React.js frontend with FastAPI backend for OCR document processin
 1. **Start the Backend Server**
    ```bash
    cd backend
-   python main.py
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
    The API will be available at `http://localhost:8000`
 
@@ -155,9 +154,10 @@ max_file_size = 50 * 1024 * 1024  # 50MB
 ### OCR Engine Configuration
 Edit `ocr_llm_engine.py` for OCR settings:
 ```python
-MODEL_NAME = "qwen2.5vl"
+MODEL_NAME = "pixtral-12b-2409"  # Mistral Pixtral model
 DPI = 200
 MAX_PAGES = None
+API_KEY = "your-mistral-api-key"  # Configure your Mistral API key
 ```
 
 ## 🎨 Customization
@@ -185,7 +185,8 @@ MAX_PAGES = None
 - `GET /documents/{id}/export` - Export document
 
 ### Chat Interface
-- `POST /chat/{id}` - Send chat message
+- `POST /chat/{id}` - Send chat message for specific document
+- `POST /chat/all` - Send chat message for all documents
 - `GET /documents/{id}/chat` - Get chat history
 
 ### System
@@ -259,9 +260,9 @@ ALLOWED_ORIGINS=https://your-frontend-domain.com
 ### Common Issues
 
 1. **OCR Processing Fails**
-   - Ensure Ollama is running: `ollama serve`
-   - Check if Qwen2.5vl model is installed: `ollama list`
+   - Check Mistral API connectivity and key validity
    - Verify Poppler installation for PDF processing
+   - Check backend logs for API errors
 
 2. **Frontend Can't Connect to Backend**
    - Check if backend is running on port 8000
@@ -299,4 +300,4 @@ For support and questions:
 
 ---
 
-**Built with ❤️ using React.js, FastAPI, and Qwen2.5vl**
+**Built with ❤️ using React.js, FastAPI, and Mistral AI**

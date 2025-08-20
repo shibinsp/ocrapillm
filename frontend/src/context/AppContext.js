@@ -29,7 +29,7 @@ const initialState = {
   isChatLoading: false,
   
   // UI State
-  activeTab: 'upload', // upload, editor, chat, documents, validation
+  activeTab: 'chat', // upload, editor, chat, documents, validation
   sidebarOpen: true,
   
   // Validation

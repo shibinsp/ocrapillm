@@ -565,6 +565,73 @@ async def validate_document(doc_id: str, data: ValidateText):
         print(f"Error validating document: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to update document: {str(e)}")
 
+@app.post("/chat/all")
+async def chat_with_all_documents(chat_data: ChatMessage):
+    """Chat with AI about all documents in the database"""
+    try:
+        if not ocr_processor:
+            raise HTTPException(status_code=500, detail="OCR processor not available")
+            
+        conn = ocr_processor.get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get all documents and their content
+        cursor.execute("""
+            SELECT d.id, d.original_filename, ec.raw_text
+            FROM documents d
+            LEFT JOIN extracted_content ec ON d.id = ec.document_id 
+                AND ec.metadata->>'content_type' = 'complete_document'
+            WHERE d.processing_status = 'completed'
+            ORDER BY d.upload_date DESC
+        """)
+        
+        documents = cursor.fetchall()
+        
+        # Combine all document texts
+        all_documents_text = ""
+        document_summaries = []
+        documents_with_content = 0
+        
+        for doc_id, filename, content in documents:
+            document_summaries.append(f"- {filename}")
+            if content:
+                all_documents_text += f"\n\n=== Document: {filename} ===\n{content}"
+                documents_with_content += 1
+        
+        # If we have documents but no content, provide a different message
+        if not all_documents_text and documents:
+            all_documents_text = f"Found {len(documents)} documents but no extracted content available."
+        elif not all_documents_text:
+            all_documents_text = "No processed documents found in the library."
+        
+        # Generate AI response based on all documents
+        ai_response = generate_ai_response_all_docs(chat_data.message, all_documents_text)
+        
+        # Add document list to response if user asks about documents
+        if "documents" in chat_data.message.lower() or "files" in chat_data.message.lower():
+            if document_summaries:
+                ai_response += f"\n\nYour current document library includes:\n" + "\n".join(document_summaries)
+            else:
+                ai_response += "\n\nYour document library is currently empty. Please upload some documents to get started."
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "response": ai_response,
+            "documents_count": len(documents),
+            "chat_history": chat_data.chat_history + [
+                {"role": "user", "content": chat_data.message, "timestamp": datetime.now().isoformat()},
+                {"role": "assistant", "content": ai_response, "timestamp": datetime.now().isoformat()}
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in global chat: {e}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
 @app.post("/chat/{doc_id}")
 async def chat_with_document(doc_id: str, chat_data: ChatMessage):
     """Chat with AI about the document using database"""
@@ -580,7 +647,7 @@ async def chat_with_document(doc_id: str, chat_data: ChatMessage):
             SELECT d.id, ec.raw_text
             FROM documents d
             LEFT JOIN extracted_content ec ON d.id = ec.document_id 
-                AND ec.content_type = 'complete_document'
+                AND ec.metadata->>'content_type' = 'complete_document'
             WHERE d.id = %s
         """, (doc_id,))
         
@@ -670,109 +737,149 @@ async def chat_with_document(doc_id: str, chat_data: ChatMessage):
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 def generate_ai_response(user_message: str, document_text: str) -> str:
-    """Generate AI response based on user message and document content"""
+    """Generate AI response based on user message and document content using Mistral API"""
     
-    # This is a simplified response generator
-    # In production, you would use a proper LLM like the one in ocr_llm_engine.py
+    if not document_text or document_text.strip() == "":
+        return "I don't have access to the document content to answer your question. Please make sure the document has been processed successfully."
     
-    user_msg_lower = user_message.lower()
-    
-    if "summary" in user_msg_lower or "summarize" in user_msg_lower:
-        return "This document appears to be a lease agreement containing rental terms, property details, and legal clauses. The key information includes rental amount, lease duration, property address, and responsibilities of both tenant and landlord."
-    
-    elif "rent" in user_msg_lower or "payment" in user_msg_lower:
-        return "Based on the document, the monthly rent amount and payment terms are specified in the lease agreement. The payment is typically due on the first of each month, with specific late fee policies outlined."
-    
-    elif "date" in user_msg_lower or "when" in user_msg_lower:
-        return "The document contains several important dates including the lease start date, end date, and various deadlines for notices and payments. Please refer to the specific sections for exact dates."
-    
-    elif "tenant" in user_msg_lower or "landlord" in user_msg_lower:
-        return "The document outlines the responsibilities of both tenant and landlord. Tenants are responsible for timely rent payment and property maintenance, while landlords must maintain the property structure and respond to maintenance requests."
-    
-    else:
-        return f"I can help you understand this document better. Based on your question about '{user_message}', I can analyze the relevant sections of the lease agreement. Would you like me to focus on any specific aspect like rent terms, responsibilities, or dates?"
-
-def generate_ai_response_all_docs(user_message: str, all_documents_text: str) -> str:
-    """Generate AI response based on user message and all documents content"""
-    
-    user_msg_lower = user_message.lower()
-    
-    if "summary" in user_msg_lower or "summarize" in user_msg_lower:
-        return "I can provide summaries of all your uploaded documents. Your document library contains various types of files that have been processed and are available for analysis. Each document has been extracted and can be searched individually or collectively."
-    
-    elif "documents" in user_msg_lower or "files" in user_msg_lower:
-        return "You have several documents in your library that I can help you analyze. I can search across all of them to find specific information, compare content between documents, or provide detailed summaries of individual files."
-    
-    elif "search" in user_msg_lower or "find" in user_msg_lower:
-        return "I can search across all your uploaded documents to find specific information. Just tell me what you're looking for and I'll scan through all your files to find relevant content, dates, names, amounts, or any other details."
-    
-    elif "compare" in user_msg_lower:
-        return "I can compare information across multiple documents in your library. This is useful for finding differences in terms, dates, amounts, or other details between similar documents like contracts or agreements."
-    
-    else:
-        return f"I can help you with questions about all your uploaded documents. I can search across your entire document library, provide summaries, compare information between documents, or help you find specific details. Based on your question about '{user_message}', what specific information would you like me to find across your documents?"
-
-@app.post("/chat/all")
-async def chat_with_all_documents(chat_data: ChatMessage):
-    """Chat with AI about all documents in the database"""
+    # Use Mistral API for intelligent document analysis
     try:
-        if not ocr_processor:
-            raise HTTPException(status_code=500, detail="OCR processor not available")
-            
-        conn = ocr_processor.get_db_connection()
-        cursor = conn.cursor()
+        import requests
         
-        # Get all documents and their content
-        cursor.execute("""
-            SELECT d.id, d.original_filename, ec.raw_text
-            FROM documents d
-            LEFT JOIN extracted_content ec ON d.id = ec.document_id 
-                AND ec.content_type = 'complete_document'
-            WHERE d.processing_status = 'completed'
-            ORDER BY d.upload_date DESC
-        """)
+        api_key = "eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH"
+        base_url = "https://api.mistral.ai/v1/chat/completions"
         
-        documents = cursor.fetchall()
-        
-        # Combine all document texts
-        all_documents_text = ""
-        document_summaries = []
-        
-        for doc_id, filename, content in documents:
-            if content:
-                all_documents_text += f"\n\n=== Document: {filename} ===\n{content}"
-                document_summaries.append(f"- {filename}")
-        
-        if not all_documents_text:
-            all_documents_text = "No processed documents found in the library."
-        
-        # Generate AI response based on all documents
-        ai_response = generate_ai_response_all_docs(chat_data.message, all_documents_text)
-        
-        # Add document list to response if user asks about documents
-        if "documents" in chat_data.message.lower() or "files" in chat_data.message.lower():
-            if document_summaries:
-                ai_response += f"\n\nYour current document library includes:\n" + "\n".join(document_summaries)
-            else:
-                ai_response += "\n\nYour document library is currently empty. Please upload some documents to get started."
-        
-        cursor.close()
-        conn.close()
-        
-        return {
-            "response": ai_response,
-            "documents_count": len(documents),
-            "chat_history": chat_data.chat_history + [
-                {"role": "user", "content": chat_data.message, "timestamp": datetime.now().isoformat()},
-                {"role": "assistant", "content": ai_response, "timestamp": datetime.now().isoformat()}
-            ]
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
         }
         
-    except HTTPException:
-        raise
+        # Create a focused prompt for document analysis
+        system_prompt = """You are an AI assistant specialized in document analysis. You have access to the full text of a document and should provide accurate, specific answers based on the actual content. Always:
+
+1. Answer directly based on the document content
+2. Quote specific text when relevant
+3. If information isn't in the document, clearly state that
+4. Be concise but comprehensive
+5. Focus on the user's specific question"""
+
+        user_prompt = f"""Document Content:
+{document_text[:8000]}  # Limit to avoid token limits
+
+User Question: {user_message}
+
+Please analyze the document and provide a specific answer to the user's question based on the actual content above."""
+
+        payload = {
+            "model": "mistral-large-latest",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.3
+        }
+        
+        response = requests.post(base_url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result['choices'][0]['message']['content']
+        else:
+            print(f"Mistral API error: {response.status_code} - {response.text}")
+            return f"I can analyze this document for you. Based on your question about '{user_message}', let me examine the content and provide you with specific information from the document."
+            
     except Exception as e:
-        print(f"Error in global chat: {e}")
-        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+        print(f"Error calling Mistral API: {e}")
+        return f"I can help you analyze this document. Your question about '{user_message}' requires me to examine the document content. Please let me know if you'd like me to focus on any specific sections."
+
+def generate_ai_response_all_docs(user_message: str, all_documents_text: str) -> str:
+    """Generate AI response based on user message and all documents content using Mistral API"""
+    
+    if not all_documents_text or all_documents_text.strip() == "":
+        return "I don't have access to any document content to answer your question. Please make sure documents have been processed successfully."
+    
+    # Use Mistral API for intelligent multi-document analysis
+    try:
+        import requests
+        
+        api_key = "eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH"
+        base_url = "https://api.mistral.ai/v1/chat/completions"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        # Create a focused prompt for multi-document analysis
+        system_prompt = """You are an AI assistant specialized in analyzing multiple documents. You have access to the content of all documents in the library and should provide accurate, specific answers based on the actual content. Always:
+
+1. Answer directly based on the document content
+2. When listing documents, provide their actual names from the content
+3. Quote specific text when relevant
+4. If information isn't in the documents, clearly state that
+5. Be concise but comprehensive
+6. Focus on the user's specific question
+7. When asked about document names or counts, provide the exact information from the content"""
+
+        # Truncate content to avoid token limits while preserving document structure
+        truncated_content = all_documents_text[:12000]
+        
+        user_prompt = f"""All Documents Content:
+{truncated_content}
+
+User Question: {user_message}
+
+Please analyze all the documents and provide a specific answer to the user's question based on the actual content above. If the user asks for document names, list them exactly as they appear in the content."""
+
+        payload = {
+            "model": "mistral-large-latest",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.3
+        }
+        
+        response = requests.post(base_url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result['choices'][0]['message']['content']
+        else:
+            print(f"Mistral API error: {response.status_code} - {response.text}")
+            # Fallback: Parse document names from content
+            lines = all_documents_text.split('\n')
+            doc_names = []
+            for line in lines:
+                if 'Document:' in line or 'Filename:' in line:
+                    doc_names.append(line.strip())
+            
+            if doc_names and ("document names" in user_message.lower() or "list" in user_message.lower()):
+                return f"Here are the document names I found:\n" + "\n".join(doc_names[:20])  # Limit to first 20
+            else:
+                return f"I can analyze your document library for you. Based on your question about '{user_message}', let me examine the content and provide you with specific information from the documents."
+            
+    except Exception as e:
+        print(f"Error calling Mistral API: {e}")
+        # Fallback: Try to extract document information
+        lines = all_documents_text.split('\n')
+        doc_count = all_documents_text.count('Document:') or all_documents_text.count('Filename:')
+        
+        if "how many" in user_message.lower() or "count" in user_message.lower():
+            return f"I found {doc_count} documents in your library. I can help you analyze their content or search for specific information."
+        elif "document names" in user_message.lower() or "list" in user_message.lower():
+            doc_names = []
+            for line in lines:
+                if 'Document:' in line or 'Filename:' in line:
+                    doc_names.append(line.strip())
+            if doc_names:
+                return f"Here are the document names I found:\n" + "\n".join(doc_names[:20])
+            else:
+                return f"I have access to {doc_count} documents but need to process them to extract the names. Please try again in a moment."
+        else:
+            return f"I can help you analyze your document library. Your question about '{user_message}' requires me to examine the document content. Please let me know if you'd like me to focus on any specific aspects."
 
 @app.get("/documents/{doc_id}/chat")
 async def get_chat_history(doc_id: str):

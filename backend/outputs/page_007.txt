@@ -1,41 +1,51 @@
-```
-3.1.8 give the Landlord reasonable prior notice of its intention to carry out works to the Landlord's Property pursuant to the Demised Easements except in the case of emergency when no notice is required;
+### 4.2
 
-3.1.9 at the end of the Term (however it expires) remove the Electrical Plant from the Demised Premises and decommission and make safe the Electric Lines and make good the Demised Premises (but without being obliged to re-surface the Demised Premises or replace planting); and
+Not do anything on the Brown Land which would in any way hinder or obstruct access to the Electric Lines or hinder the exercise of the Demised Easements;
 
-3.1.10 insure with a reputable insurer (or self-insure) against third party and public liability and produce to the Landlord on demand (but no more than once a year) evidence of such insurance.
+### 4.3
 
-3.2
+With the intention of binding all part of the Brown Land in order to benefit and protect the Demised Easements:
 
-3.2.1 The Tenant will indemnify the Landlord against all damage costs expenses proceedings and liabilities ("Claims") that at the date of this lease are the reasonably foreseeable consequence of any negligence or other wrongful act or omission that:
+#### 4.3.1
 
-3.2.1.1 is a breach of the terms of this lease; or
+not do anything on the Brown Land which would interfere with or damage any Electric Line (or its ducts) retained or laid by the Tenant in the exercise of the Demised Easements and take all reasonable precautions to prevent such damage or injury;
 
-3.2.1.2 arises in the exercise of any of the Demised Easements,
+#### 4.3.2
 
-except such Claims which arise out of the negligence or wrongful act or omission of the Landlord its servants or agents.
+not either alter or cover the existing level or surface of the Brown Land in such a way as to make the laying of or access to any Electric Line or ducts impracticable or more difficult than it is at the date of this lease but the Landlord shall not be prevented from laying and/or re-laying approaches to part of the Brown Land in such a way as to make the laying of Electric Lines along a road or footpath or other way after the initial laying of Electric Lines pursuant to the Demised Easements;
 
-3.2.2 The Landlord shall in relation to any Claims:
+#### 4.3.3
 
-3.2.2.1 give to the Tenant written notice as soon as practicable after the Landlord becomes aware of them;
+without prejudice to sub-clause 4.3.2 not erect any building or structure on the Brown Land (other than such as are shown on the Plan);
 
-3.2.2.2 not admit liability to any third party or make any offer to settle any Claim without the consent of the Tenant (such consent not to be unreasonably withheld or delayed);
+#### 4.3.4
 
-3.2.2.3 allow the Tenant to conduct in the name of the Landlord any litigation or other dispute resolution process and give the Tenant such assistance and co-operation as the Tenant may reasonably require including the fair and reasonable costs of the Landlord of doing this; and
+nor plant any trees on or which might grow over or onto any part of the Brown Land; and
 
-3.2.2.4 take all reasonable steps to mitigate any loss.
+### 4.4
 
-3.2.3 If the Landlord subsequently recovers (in whatever form) a sum that is directly referable to the event giving rise to the Claims the Landlord shall immediately pay to the Tenant the sum that is the lesser of:
+Not do anything to the Brown Land which would interfere with or reduce the right of support and protection for the Building, the Electric Lines.
 
-3.2.3.1 an amount equal to the sum recovered (less any out-of-pocket costs and expenses properly incurred by the Landlord in recovering the same); and
+### 5 Redevelopment
 
-3.2.3.2 the amount paid by the Tenant under this indemnity.
+It is hereby agreed and declared by and between the parties as follows:
 
-4 Landlord's Covenants
+#### 5.1
 
-The Landlord covenants with the Tenant that it will:
+In this clause the expression:
 
-4.1 Allow the Tenant to peacefully enjoy the Demised Premises and the Demised Easements throughout the Term without any interruption or disturbance by the Landlord or any person claiming by through under or in trust for the Landlord or by title paramount;
+**Retained Land** means the whole of the remainder of the land belonging to the Landlord now within the title number set out at LR2 and the Landlord's adjoining premises known as Fulham Gas Works, Imperial Road, Fulham;
 
-3 24-Jul-20 76526816.4
-```
+**Develop** includes redevelop, major works, reconfiguration or refurbishment; and
+
+**Alternative Site and Alternative Route(s)** mean respectively such site and route(s) within the Retained Land as near as possible to the Demised Premises and the land the subject of the Demised Easements respectively as shall be approved by the Tenant (such approval not to be unreasonably withheld) as suitable alternatives for the Tenant's purposes (to allow it in any event to perform its functions not less efficiently and conveniently as previously) and by any planning or other authority having jurisdiction in the selection thereof.
+
+#### 5.2
+
+If the Landlord shall during the Term desire to Develop the Retained Land and it is necessary for such development to include the Demised Premises and/or the land the subject of the Demised Easements or some part thereof and shall have obtained planning permission for such development the Landlord shall be entitled on the date of such planning permission (or such earlier date as the Landlord may reasonably require) to serve on the Tenant the "Notice" to terminate that lease subject to the following terms and conditions:
+
+#### 5.2.1
+
+on or before the expiration of the Notice the Landlord shall with full title guarantee (subject to investigation and approval of title by the Tenant's solicitor which approval not to be unreasonably withheld) by Deed transfer to the Tenant at the Landlord's expense and at the expense of the Tenant and without payment of any consideration by the Tenant demise to the Tenant an Alternative Site and easements in respect of the Alternative Route(s) such demise to be for a period equal to the greater of (i) the residual
+
+24-Jul-20 76526816.4

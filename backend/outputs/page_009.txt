@@ -1,33 +1,61 @@
-Term of this lease and (ii) 25 years otherwise to be in the same form and contain the same provisions and covenants (mutatis mutandis) as are herein contained;
+### 6.2
 
-5.2.2 subject to no event or circumstance beyond its reasonable control preventing or delaying it from doing so but as soon as practicable after such demise to the Tenant in respect of the Alternative Site and the Alternative Route(s) the Tenant shall (in the following order of events):
+All Electrical Plant Electric Lines and other equipment to be provided installed laid or fixed by the Tenant in on through under or over any part of the Demised Premises or in the ducts or under the Brown Land shall be and remain the property of the Tenant who may at any time vary or remove them at its absolute discretion and the Landlord shall not be liable at any time or at the end or determination of the Term in either case making good any damage to the reasonable satisfaction of the Landlord.
 
-5.2.2.1 complete the erection of an electricity substation on the Alternative Site and laying or construction and installation of any interalia electric lines along the Alternative Route(s) and the bringing in to use thereof;
+### 6.3
 
-5.2.2.2 remove so far as necessary the electrical plant from the Demised Premises and so far as necessary remove the electric lines from the land the subject of the Demised Easements required to be released or rendered dead the same; and
+Any notice served under or in connection with this lease is to be in writing and be treated as properly served if compliance is made with the provisions of Section 196 of the Law of Property Act 1925 (as amended by the Rent Act 1957) unless the Landlord expressly provides of this lease whereupon such express provisions shall prevail and in the case of the Tenant it is served on the company secretary at the Tenant's then registered office.
 
-5.2.2.3 deliver up the Demised Premises to the Landlord with vacant possession.
+### 6.4
 
-5.3 The Landlord shall (to which effect the Landlord hereby covenants) be liable for and pay to the Tenant on demand the costs charges and expenses reasonably and properly incurred or sustained by the Tenant in or arising out of:
+A notice will not be deemed served under this lease if it is left for the Tenant on or in the Demised Premises or the part of the Landlord's Property affected by or the subject of the Demised Covenants or if it is left for the Landlord on the Landlord's Property.
 
-5.3.1 the construction and installation of an electricity substation on the Alternative Site and the laying or construction and installation of inter alia electric lines along the Alternative Route(s);
+### 6.5
 
-5.3.2 the removal of the electrical plant from the Demised Premises and of electric lines from the land the subject of the Demised Easements required to be released as aforesaid;
+The Tenant shall apply to the Land Registry to register this lease and shall deal promptly and properly with any requisitions raised by the Land Registry.
 
-5.3.3 the preparation and completion of the documentation required in respect of the demise of the Alternative Site and easements in respect of the Alternative Route(s) and the surrender of the Demised Premises and such of the Demised Easements required to be released as aforesaid including where applicable stamp duty land tax, all Land Registry fees for noting thereof on the Register of the title(s) relating thereto;
+### 6.6
 
-AND without prejudice to the foregoing it required by the Tenant so to do shall as a condition precedent to the completion of such demise from time to time make payment to the Tenant of the estimated amount of such costs charges and expenses and the Tenant will (as it thereby covenants to do) repay to the Landlord the difference between the estimated amount so paid and the total amount (if smaller) of such costs charges and expenses.
+Nothing contained in this lease shall prejudice, restrict or otherwise affect the statutory rights, powers and duties of the Tenant as an electricity distribution network operator or the means by which it exercises those rights and powers or performs those duties pursuant to its Undertaking.
 
-6 Provisos
+### 7 Break Clause
 
-The parties agree as follows:
+### 7.1
 
-6.1 That if any covenants on the part of the Tenant are not substantially performed or observed despite the Landlord giving the Tenant notice of the breach and a reasonable period of time in which to remedy the breach then the Landlord may re-enter the Demised Premises and with immediate effect this lease shall determine but without prejudice to:
+The Tenant may terminate this Lease at any time following the grant to the Tenant at the relevant time of a permanent substitution lease substantially in the form of this lease but without clauses 7 and 8 (the "Permanent Lease") by the Tenant giving not less than 3 months prior written notice to the Landlord (or such shorter period as shall be agreed between the parties acting reasonably).
 
-6.1.1 any right of action of either party in respect of any antecedent breach of any covenant by the other party or;
+### 7.2
 
-6.1.2 the right of the Tenant to enter the Demised Premises and to remove all apparatus equipment Electric Lines or other works and property of the Tenant.
+The plan to be annexed to the Permanent Lease shall be agreed between the parties as soon as practicable and each party shall act reasonably in agreeing the plan to include the Tenant's requirements as to access, cable routes and ventilation.
 
-5
+### 7.3
+
+The Tenant agrees to enter into the Permanent Lease as soon as possible following service of the notice referred to in clause 7.1 subject to the Landlord procuring all necessary third party consents to enable the rights to be granted pursuant to the Permanent Lease (including where necessary such third party landowners being a party to the Permanent Lease).
+
+### 7.4
+
+The Landlord may terminate this Lease at any time following the later of:
+
+#### 7.4.1
+
+the grant to the Tenant of the Permanent Lease; and
+
+#### 7.4.2
+
+the premises demised by the Permanent Lease being fully operational so that the Tenant can continue to distribute electricity to its distribution network,
+
+by giving to the Tenant written notice.
+
+### 7.5
+
+The Tenant shall at the written request and cost of the Landlord decommission and remove the substation and electrical apparatus at the Demised Premises following the later of:
+
+#### 7.5.1
+
+the grant of the Permanent Lease; and
+
+#### 7.5.2
+
+the premises demised by the Permanent Lease being fully operational so that the Tenant can continue to distribute electricity to its distribution network.
 
 24-Jul-20 76526816.4

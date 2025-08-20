@@ -66,8 +66,7 @@ const Header = () => {
         
         <button
           onClick={() => actions.setActiveTab('chat')}
-          disabled={!currentDocument}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             state.activeTab === 'chat'
               ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
               : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-700'

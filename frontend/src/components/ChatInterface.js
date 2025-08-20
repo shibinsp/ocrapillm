@@ -21,12 +21,28 @@ const ChatInterface = ({ isPanel = false }) => {
     loadChatHistory();
   }, []);
 
+  // Save chat history to localStorage whenever chatMessages change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      localStorage.setItem('globalChatHistory', JSON.stringify(chatMessages));
+    }
+  }, [chatMessages]);
+
   const loadChatHistory = async () => {
     try {
-      // For now, start with empty chat for global document queries
-      actions.setChatMessages([]);
+      // Load chat history from localStorage for persistence across page navigation
+      const savedChatHistory = localStorage.getItem('globalChatHistory');
+      if (savedChatHistory) {
+        const parsedHistory = JSON.parse(savedChatHistory);
+        actions.setChatMessages(parsedHistory);
+      } else {
+        // Start with empty chat for new sessions
+        actions.setChatMessages([]);
+      }
     } catch (error) {
       console.error('Failed to load chat history:', error);
+      // Fallback to empty chat if there's an error
+      actions.setChatMessages([]);
     }
   };
 
@@ -119,6 +135,8 @@ const ChatInterface = ({ isPanel = false }) => {
 
   const clearChat = () => {
     actions.clearChat();
+    // Also clear from localStorage
+    localStorage.removeItem('globalChatHistory');
     actions.showInfo('Chat history cleared');
   };
 
@@ -127,23 +145,7 @@ const ChatInterface = ({ isPanel = false }) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (!currentDocument) {
-    return (
-      <div className="h-full flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-secondary-100 dark:bg-secondary-700 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FiMessageCircle className="w-8 h-8 text-secondary-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2">
-            AI Assistant Ready
-          </h3>
-          <p className="text-secondary-600 dark:text-secondary-400 text-sm">
-            Upload and process a document to start chatting with our AI assistant.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Chat is now always available - can chat with all documents or specific document
 
   return (
     <div className={`h-full flex flex-col ${isPanel ? 'border-l border-secondary-200 dark:border-secondary-700' : ''}`}>

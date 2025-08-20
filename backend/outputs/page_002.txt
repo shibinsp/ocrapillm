@@ -1,25 +1,35 @@
-THE Company shall:-
+# LAND REGISTRY PRESCRIBED CLAUSES
 
-(a) Not cause any unnecessary damage or injury to the Property and shall take all reasonable precautions to avoid obstruction or interference with the use of any road or footpath sewer drain or watercourse that may be crossed by the Works
+| LR1. Date of lease | 11 December 2020 |
+|-------------------|------------------|
+| LR2. Title number(s) | LR2.1 Landlord's title number(s) |
+|-------------------|------------------|
+| AGL308803 |
+| LR2.2 Other title numbers |
+|-------------------|------------------|
+| LR3. Parties to this lease | Landlord |
+|-------------------|------------------|
+| St William Homes LLP (company no. OC396332) whose registered office is at Berkeley House, 19 Portsmouth Road, Cobham, Surrey KT11 1JG |
+| Tenant |
+|-------------------|------------------|
+| London Power Networks plc (company no. 3929195) whose registered office is at Newington House, 237 Southwark Bridge Road, London SE1 6NP |
+| LR4. Property | In the case of a conflict between this clause and the remainder of this lease, then, for the purposes of registration, this clause shall prevail. |
+|-------------------|------------------|
+| As defined in the terms of this lease and defined in this lease as "the Demised Premises". |
+| LR5. Prescribed statements etc | LR5.1 Statements prescribed under rules 179 (dispositions in favour of a charity), 180 (dispositions by a charity), or 198 (leases under the Leasehold Reform, Housing and Urban Development Act 1985) of the Land Registration Rules 2003 |
+|-------------------|------------------|
+| None |
+| LR5.2 This lease is made under, or by reference to, provisions of: |
+|-------------------|------------------|
+| None |
+| LR6. Term for which the Property is leased | The Term as specified in this lease at clause 2 |
+|-------------------|------------------|
+| LR7. Premium | One Pound (£1.00) |
+|-------------------|------------------|
+| LR8. Prohibitions or restrictions on disposing of this lease | This lease contains a provision that prohibits or restricts dispositions. |
+|-------------------|------------------|
+| LR9. Rights of acquisition etc | LR9.1 Tenant's contractual rights to renew this lease, to acquire the reversion or another lease of the Property, or to acquire an interest in other land |
+|-------------------|------------------|
+| None |
 
-(b) Make good to the reasonable satisfaction of the Grantor any damage caused by or arising out of the execution of the Works. If for any reason any such damage cannot be made good the Company shall compensate the Grantor in an amount which has previously been approved by the Company
-
-(c) Give to the Grantor not less than five days' previous notice (except in cases of emergency when as long notice as practicable shall be given) of the intended exercise of any of the rights conferred by Clause 2 above
-
-(d) Upon completion of this Agreement, pay the Grantor a one-off payment of £0.00
-
-(e) At all times keep the Grantor indemnified against all losses, damages and expenses which he suffers or incurs by reason or on account of any breach of this Agreement including any negligent act or omission of the Company in connection with the execution or existence of the Works provided that this indemnity shall not extend to any such losses damages or expenses to the extent caused by the default of the Grantor
-
-4. THE GRANTOR'S COVENANTS
-
-THE Grantor shall not:-
-
-(a) Do or cause or permit to be done on the Property anything likely to cause damage or interference of any kind to the Works
-
-(b) Make or cause or permit to be made any material alteration to the Property so as to interfere with or obstruct the access to the Works or so as to interfere with the support afforded to the Works by the surrounding soil without the prior written consent of the Company
-
-5. TERMINATION
-
-This Agreement shall remain in force for a period of 15 years from the date hereof and thereafter until determined at the expiry of not less than twelve months' previous written notice given at any time by either party but without prejudice to the rights which the Company might exercise under the Electricity Act 1989
-
-THE SCHEDULE
+24-Jul-20 76526816.4
