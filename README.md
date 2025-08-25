@@ -261,6 +261,7 @@ ALLOWED_ORIGINS=https://your-frontend-domain.com
 
 1. **OCR Processing Fails**
    - Check Mistral API connectivity and key validity
+   - Verify Google Cloud Vision API credentials are properly configured
    - Verify Poppler installation for PDF processing
    - Check backend logs for API errors
 
@@ -278,6 +279,21 @@ ALLOWED_ORIGINS=https://your-frontend-domain.com
 - Frontend: Browser developer console
 - Backend: Terminal output where server is running
 - OCR Engine: Check console output during processing
+
+## 📋 Recent Updates
+
+### Version 2.1.0 (Latest)
+- **Arc Diagram Processing**: Added intelligent detection and separation of arc diagrams
+- **Google Vision Integration**: Integrated Google Cloud Vision API for enhanced diagram processing
+- **Bug Fixes**: Resolved React rendering errors with page data structure
+- **Security**: Removed sensitive credentials from git history and added comprehensive .gitignore
+- **Workflow Optimization**: Improved processing pipeline with dual OCR engine support
+
+### Key Improvements
+- Enhanced accuracy for technical drawings and engineering diagrams
+- Automatic fallback between OCR engines for optimal results
+- Improved error handling and user feedback
+- Better security practices for API credentials
 
 ## 📝 License
 
