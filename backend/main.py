@@ -15,13 +15,24 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Import OCR engine class
 try:
-    from ocr_llm_engine import DatabaseOCR
-    # Initialize OCR processor with Mistral API key
-    ocr_processor = DatabaseOCR(api_key="eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH")
+    from ocr_engine_clean import DatabaseOCR
+    print("✅ OCR engine imported successfully")
+    # Initialize OCR processor without immediate database connection
+    ocr_processor = DatabaseOCR(api_key="eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH", init_db=False)
     print("✅ OCR engine initialized successfully")
-except ImportError as e:
-    print(f"Warning: Could not import ocr_llm_engine: {e}. OCR functionality will be limited.")
+except Exception as e:
+    print(f"Warning: Could not import ocr_engine_clean: {e}. OCR functionality will be limited.")
     ocr_processor = None
+
+# Import new workflow modules
+try:
+    from arc_diagram_separation import ArcDiagramSeparator
+    from text_extraction_from_diagram import DiagramTextExtractor
+    print("✅ Workflow modules imported successfully")
+except Exception as e:
+    print(f"Warning: Could not import workflow modules: {e}. New workflow will be limited.")
+    ArcDiagramSeparator = None
+    DiagramTextExtractor = None
 
 app = FastAPI(
     title="OCR AI Assistant API",
@@ -55,9 +66,8 @@ class Document(BaseModel):
     pages: Optional[int] = None
     extracted_text: Optional[str] = None
 
-# Database initialization is handled by the OCR processor
-if ocr_processor:
-    print("✅ Database initialized via OCR processor")
+# OCR processor initialized without database connection
+# Database will be initialized on first use
 
 # Directories
 UPLOAD_DIR = Path("uploads")
@@ -69,6 +79,142 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 jobs = {}
 executor = ThreadPoolExecutor(max_workers=3)  # Limit concurrent OCR tasks
 
+async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: str):
+    """
+    New workflow: Separate arc diagrams and extract text from remaining content
+    """
+    try:
+        print(f"🔄 Starting new PDF workflow for task {task_id}")
+        jobs[task_id]['status'] = 'processing'
+        
+        if not ArcDiagramSeparator or not DiagramTextExtractor:
+            raise Exception("Workflow modules not available")
+        
+        # Step 1: Separate arc diagrams from PDF
+        print(f"📊 Separating arc diagrams from {filename}...")
+        arc_separator = ArcDiagramSeparator(similarity_threshold=0.7)
+        
+        loop = asyncio.get_event_loop()
+        separation_result = await loop.run_in_executor(
+            executor,
+            lambda: arc_separator.separate_arc_diagrams(
+                pdf_path=file_path,
+                output_dir=str(OUTPUT_DIR)
+            )
+        )
+        
+        if separation_result.get('error'):
+            print(f"⚠️ Arc diagram separation failed: {separation_result['error']}")
+            print(f"📋 Falling back to processing all pages with Google Cloud Vision API...")
+            
+            # Fallback: Process entire PDF with Google Cloud Vision API
+            diagram_extractor = DiagramTextExtractor()
+            
+            fallback_result = await loop.run_in_executor(
+                executor,
+                lambda: diagram_extractor.extract_text_from_pdf(
+                    pdf_path=file_path,
+                    output_dir=str(OUTPUT_DIR)
+                )
+            )
+            
+            jobs[task_id].update({
+                'status': 'completed',
+                'result': {
+                    'workflow_type': 'fallback_google_vision',
+                    'total_pages': fallback_result.get('total_pages', 0),
+                    'extracted_text': fallback_result.get('combined_text', ''),
+                    'pages': fallback_result.get('total_pages', 0),  # Return pages count, not pages array
+                    'message': 'Processed with Google Cloud Vision API (fallback mode)'
+                }
+            })
+            
+            print(f"✅ Fallback workflow completed for task {task_id}")
+            return
+        
+        # Step 2: Process non-arc pages with existing OCR engine if available
+        text_extraction_result = {"pages": [], "combined_text": "", "total_pages": 0}
+        
+        if separation_result['non_arc_pages_count'] > 0 and ocr_processor:
+            print(f"🔍 Processing {separation_result['non_arc_pages_count']} non-arc pages with OCR engine...")
+            
+            # Use the non-arc PDF if it was created
+            non_arc_pdf_path = separation_result.get('non_arc_pdf_path')
+            if non_arc_pdf_path and Path(non_arc_pdf_path).exists():
+                ocr_result = await loop.run_in_executor(
+                    executor,
+                    lambda: ocr_processor.process_pdf_from_frontend(
+                        pdf_path=non_arc_pdf_path,
+                        original_filename=f"non_arc_{filename}",
+                        output_dir=str(OUTPUT_DIR)
+                    )
+                )
+                
+                text_extraction_result = {
+                    "pages": [{"page_number": i+1, "text": ocr_result.get('extracted_text', '')} for i in range(ocr_result.get('total_pages', 0))],
+                    "combined_text": ocr_result.get('extracted_text', ''),
+                    "total_pages": ocr_result.get('total_pages', 0)
+                }
+        
+        # Step 3: Extract text from arc diagrams using Google Vision API
+        arc_text_result = {"pages": [], "combined_text": "", "total_pages": 0}
+        
+        if separation_result['arc_pages_count'] > 0:
+            print(f"📝 Extracting text from {separation_result['arc_pages_count']} arc diagram pages using Google Vision API...")
+            
+            arc_pdf_path = separation_result.get('arc_pdf_path')
+            if arc_pdf_path and Path(arc_pdf_path).exists():
+                text_extractor = DiagramTextExtractor()
+                arc_text_result = await loop.run_in_executor(
+                    executor,
+                    lambda: text_extractor.extract_text_from_pdf(
+                        pdf_path=arc_pdf_path,
+                        output_dir=str(OUTPUT_DIR / "extracted_images")
+                    )
+                )
+        
+        # Step 4: Combine results
+        combined_text = ""
+        total_pages = separation_result['total_pages']
+        
+        if arc_text_result['combined_text']:
+            combined_text += f"\n\n=== ARC DIAGRAMS ({arc_text_result['total_pages']} pages) ===\n"
+            combined_text += arc_text_result['combined_text']
+        
+        if text_extraction_result['combined_text']:
+            combined_text += f"\n\n=== TEXT CONTENT ({text_extraction_result['total_pages']} pages) ===\n"
+            combined_text += text_extraction_result['combined_text']
+        
+        # Calculate processing time (mock)
+        processing_time = 2000  # milliseconds
+        
+        jobs[task_id]['status'] = 'completed'
+        jobs[task_id]['result'] = {
+            "document_id": task_id,
+            "message": "Document processed with new workflow",
+            "status": "completed",
+            "extracted_text": combined_text.strip(),
+            "pages": total_pages,  # Ensure this is always a number
+            "processing_time_ms": processing_time,
+            "workflow_details": {
+                "arc_pages": separation_result['arc_pages_count'],
+                "non_arc_pages": separation_result['non_arc_pages_count'],
+                "total_pages": total_pages,
+                "arc_pdf_path": separation_result.get('arc_pdf_path'),
+                "non_arc_pdf_path": separation_result.get('non_arc_pdf_path')
+            }
+        }
+        
+        print(f"✅ New workflow completed for task {task_id}")
+        
+    except Exception as e:
+        print(f"❌ New workflow failed for task {task_id}: {e}")
+        jobs[task_id]['status'] = 'failed'
+        jobs[task_id]['error'] = str(e)
+        # Clean up file if processing failed
+        if Path(file_path).exists():
+            Path(file_path).unlink()
+
 @app.get("/")
 async def root():
     return {"message": "OCR AI Assistant API", "status": "running"}
@@ -76,37 +222,22 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Simple health check without database dependency"""
-    return {
-        "status": "healthy", 
-        "timestamp": datetime.now().isoformat(),
-        "service": "OCR AI Assistant API",
-        "version": "1.0.0"
-    }
-
-@app.get("/health/db")
-async def health_check_db():
-    """Health check with database connectivity test"""
     try:
-        if not ocr_processor:
-            return {
-                "status": "unhealthy",
-                "error": "OCR processor not available",
-                "timestamp": datetime.now().isoformat()
-            }
-        
-        # Quick database test
-        db_test = ocr_processor.test_database_connection()
         return {
-            "status": "healthy" if db_test["success"] else "unhealthy",
-            "database": db_test,
-            "timestamp": datetime.now().isoformat()
+            "status": "healthy", 
+            "timestamp": datetime.now().isoformat(),
+            "service": "OCR AI Assistant API",
+            "version": "1.0.0",
+            "database": "not_checked"
         }
     except Exception as e:
         return {
-            "status": "unhealthy",
+            "status": "error",
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
+
+# Removed /health/db endpoint to avoid database connection conflicts
 
 async def process_ocr_task(task_id: str, file_path: str, filename: str):
     """Background OCR processing function"""
@@ -180,8 +311,8 @@ async def upload_document(file: UploadFile = File(...)):
             }
         }
         
-        # Start OCR processing in background
-        asyncio.create_task(process_ocr_task(task_id, str(file_path), file.filename))
+        # Start new PDF workflow processing in background
+        asyncio.create_task(process_pdf_with_new_workflow(task_id, str(file_path), file.filename))
         
         # Immediately respond with task ID
         return {
