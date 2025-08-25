@@ -1,303 +1,178 @@
 # OCR AI Assistant
 
-A professional React.js frontend with FastAPI backend for OCR document processing and AI-powered document analysis. This application allows users to upload PDF documents, extract text using advanced OCR technology, validate and edit the extracted content, and chat with an AI assistant about the document.
+A powerful OCR (Optical Character Recognition) application that combines advanced text extraction with AI-powered chat capabilities. Built with React.js frontend and FastAPI backend, featuring intelligent document processing and conversational AI.
 
-## 🌟 Features
+## 🚀 Features
 
 ### Frontend (React.js)
-- **Modern UI**: Clean, responsive design with dark/light mode
-- **PDF Upload**: Drag & drop interface with file validation
-- **OCR Processing**: Real-time processing status with progress indicators
-- **Text Editor**: Advanced text editing with search, syntax highlighting, and keyboard shortcuts
-- **Document Management**: History panel with search, filter, and export capabilities
-- **AI Chatbot**: Interactive chat interface for document Q&A
-- **Mobile Responsive**: Optimized for desktop, tablet, and mobile devices
+- **Modern UI**: Clean, responsive interface built with Tailwind CSS
+- **Document Upload**: Drag-and-drop PDF upload with real-time processing status
+- **Text Editor**: Interactive text editing with syntax highlighting
+- **AI Chat**: Integrated chat interface for document analysis and Q&A
+- **Document Management**: View, edit, and manage processed documents
+- **Real-time Updates**: Live processing status and progress indicators
 
 ### Backend (FastAPI)
-- **Document Processing**: PDF upload and OCR text extraction
-- **RESTful API**: Clean API endpoints for all operations
-- **Real-time Status**: Processing status tracking
-- **Chat Integration**: AI-powered document analysis
-- **Export Functionality**: Multiple export formats (TXT, DOCX)
+- **Dual OCR Engine**: Intelligent switching between standard OCR and Google Vision API
+- **Arc Diagram Detection**: Automatic identification and specialized processing of technical drawings
+- **AI Integration**: Mistral AI for intelligent text processing and chat responses
+- **RESTful API**: Comprehensive endpoints for document and chat operations
+- **Async Processing**: Non-blocking document processing with status tracking
 
-### OCR Engine
-- **AI-Powered**: Uses Mistral Pixtral API for advanced text extraction and document analysis
-- **Multi-format Support**: Handles text, tables, and diagrams
-- **High Accuracy**: Processes complex layouts and handwriting
-- **Batch Processing**: Efficient multi-page document handling
-- **Intelligent Chat**: Real-time document analysis with Mistral AI for accurate Q&A
+## 📋 Prerequisites
 
-## 🚀 Quick Start
+- **Python 3.8+**
+- **Node.js 16+** and npm
+- **Poppler** (for PDF processing)
+- **Mistral AI API Key**
+- **Google Cloud Vision API** credentials (for enhanced diagram processing)
 
-### Prerequisites
+## 🛠️ Installation
 
-- Node.js 16+ and npm
-- Python 3.8+
-- Mistral API key (for AI-powered document analysis)
-- Poppler (for PDF processing)
+### 1. Clone Repository
+```bash
+git clone <repository-url>
+cd ocrapillm
+```
 
-### Installation
+### 2. Backend Setup
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-1. **Clone the repository**
-   ```bash
-   cd d:\trae\ocrapillm
-   ```
+### 3. Environment Configuration
+- Place your Google Cloud Vision API credentials file as `backend/google_credentials.json`
+- Mistral API key is pre-configured in the system
 
-2. **Install Frontend Dependencies**
-   ```bash
-   cd frontend
-   npm install
-   ```
+### 4. Frontend Setup
+```bash
+cd frontend
+npm install
+```
 
-3. **Install Backend Dependencies**
-   ```bash
-   cd ../backend
-   pip install -r requirements.txt
-   ```
+## 🚀 Running the Application
 
-4. **Setup Environment**
-   ```bash
-   # The application uses Mistral API for AI functionality
-   # API key is already configured in the backend
-   # No additional setup required for AI features
-   ```
+### Start Backend Server
+```bash
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
 
-### Running the Application
+### Start Frontend Development Server
+```bash
+cd frontend
+npm start
+```
 
-1. **Start the Backend Server**
-   ```bash
-   cd backend
-   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-   The API will be available at `http://localhost:8000`
-
-2. **Start the Frontend Development Server**
-   ```bash
-   cd frontend
-   npm start
-   ```
-   The application will open at `http://localhost:3000`
-
-3. **Access the Application**
-   - Open your browser to `http://localhost:3000`
-   - Upload a PDF document
-   - Wait for OCR processing to complete
-   - Edit the extracted text and chat with the AI assistant
+Access the application at `http://localhost:3000`
 
 ## 📁 Project Structure
 
 ```
 ocrapillm/
-├── frontend/                 # React.js frontend
-│   ├── public/
+├── backend/
+│   ├── main.py                          # FastAPI application entry point
+│   ├── ocr_engine_clean.py             # Standard OCR processing engine
+│   ├── ocr_llm_engine.py               # AI-enhanced OCR processing
+│   ├── arc_diagram_separation.py       # Arc diagram detection and separation
+│   ├── text_extraction_from_diagram.py # Google Vision API integration
+│   ├── requirements.txt                # Python dependencies
+│   └── sample_image/                   # Test images
+├── frontend/
 │   ├── src/
-│   │   ├── components/       # React components
-│   │   ├── context/         # State management
-│   │   ├── services/        # API services
-│   │   └── index.js
-│   ├── package.json
-│   └── tailwind.config.js
-├── backend/                  # FastAPI backend
-│   ├── main.py              # Main API server
-│   ├── requirements.txt
-│   ├── uploads/             # Uploaded files
-│   └── outputs/             # Exported files
-├── ocr_llm_engine.py        # OCR processing engine
-├── ocr_output/              # OCR results
+│   │   ├── App.js                      # Main React application
+│   │   ├── components/                 # React components
+│   │   ├── context/                    # React context providers
+│   │   └── services/                   # API service functions
+│   ├── package.json                    # Node.js dependencies
+│   └── tailwind.config.js             # Tailwind CSS configuration
 └── README.md
 ```
 
-## 🎯 Usage Guide
+## 💡 Usage
 
-### 1. Upload Document
-- Click "Upload" tab or drag & drop a PDF file
-- Supported formats: PDF (max 50MB)
-- Wait for upload and processing to complete
+1. **Upload Document**: Drag and drop a PDF file or click to browse
+2. **Processing**: The system automatically detects document type and applies appropriate OCR
+3. **Review Text**: Edit extracted text in the built-in editor
+4. **AI Chat**: Ask questions about the document content
+5. **Export**: Save processed text or continue with additional documents
 
-### 2. Review and Edit Text
-- Switch to "Editor" tab to view extracted text
-- Use search functionality (Ctrl+F)
-- Edit text directly in the editor
-- Save changes (Ctrl+S)
-- Export to TXT or DOCX format
+## ⚙️ Configuration
 
-### 3. Chat with AI
-- Switch to "Chat" tab
-- Ask questions about the document content
-- Get summaries, find specific information
-- View chat history
+### OCR Engine Selection
+The system automatically chooses the best OCR method:
+- **Standard OCR**: For regular text documents
+- **Google Vision API**: For complex diagrams and technical drawings
+- **Hybrid Processing**: Combines both methods for optimal results
 
-### 4. Manage Documents
-- View all processed documents in "Documents" tab
-- Search and filter documents
-- Delete or export documents
-- Access previous processing results
+### API Endpoints
+- `POST /upload-pdf/`: Upload and process PDF documents
+- `POST /chat/`: AI chat functionality
+- `GET /health/`: System health check
+- `GET /jobs/{job_id}/status/`: Check processing status
 
-## 🔧 Configuration
-
-### Frontend Configuration
-Edit `frontend/src/services/api.js` to change API settings:
-```javascript
-const API_BASE_URL = 'http://localhost:8000';
-```
-
-### Backend Configuration
-Edit `backend/main.py` for server settings:
-```python
-# CORS settings
-allow_origins=["http://localhost:3000"]
-
-# File upload limits
-max_file_size = 50 * 1024 * 1024  # 50MB
-```
-
-### OCR Engine Configuration
-Edit `ocr_llm_engine.py` for OCR settings:
-```python
-MODEL_NAME = "pixtral-12b-2409"  # Mistral Pixtral model
-DPI = 200
-MAX_PAGES = None
-API_KEY = "your-mistral-api-key"  # Configure your Mistral API key
-```
-
-## 🎨 Customization
-
-### Styling
-- Edit `frontend/tailwind.config.js` for theme customization
-- Modify `frontend/src/index.css` for custom styles
-- Update color scheme in the config file
-
-### Components
-- All React components are in `frontend/src/components/`
-- Each component is self-contained and reusable
-- State management uses React Context API
-
-## 🔍 API Endpoints
-
-### Document Management
-- `POST /upload/` - Upload and process PDF
-- `GET /documents/` - Get all documents
-- `GET /documents/{id}/content` - Get document content
-- `DELETE /documents/{id}` - Delete document
-
-### Text Processing
-- `POST /validate/{id}` - Update validated text
-- `GET /documents/{id}/export` - Export document
-
-### Chat Interface
-- `POST /chat/{id}` - Send chat message for specific document
-- `POST /chat/all` - Send chat message for all documents
-- `GET /documents/{id}/chat` - Get chat history
-
-### System
-- `GET /health` - Health check
-- `GET /` - API information
-
-## 🛠️ Development
+## 🔧 Development
 
 ### Frontend Development
-```bash
-cd frontend
-npm start          # Start dev server
-npm run build      # Build for production
-npm test           # Run tests
-```
+- Built with React 18 and modern hooks
+- Styled with Tailwind CSS for responsive design
+- Uses Axios for API communication
 
 ### Backend Development
-```bash
-cd backend
-python main.py     # Start with auto-reload
-# or
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### Code Style
-- Frontend: ESLint + Prettier
-- Backend: Black + isort
-- Use meaningful component and variable names
-- Follow React hooks best practices
+- FastAPI with async/await support
+- Modular architecture for easy extension
+- Comprehensive error handling and logging
 
 ## 🚀 Production Deployment
 
-### Frontend
-```bash
-cd frontend
-npm run build
-# Deploy the 'build' folder to your web server
-```
-
-### Backend
-```bash
-cd backend
-pip install gunicorn
-gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
-```
-
 ### Environment Variables
-Create `.env` files for production:
+```bash
+# Backend
+PORT=8001
+HOST=0.0.0.0
 
-**Frontend (.env.production)**
-```
-REACT_APP_API_URL=https://your-api-domain.com
-```
-
-**Backend (.env)**
-```
-ENVIRONMENT=production
-ALLOWED_ORIGINS=https://your-frontend-domain.com
+# Frontend
+REACT_APP_API_URL=http://your-backend-url:8001
 ```
 
-## 🔒 Security Considerations
+### Docker Support
+Docker configurations can be added for containerized deployment.
 
-- File upload validation and size limits
-- CORS configuration for production
-- Input sanitization for chat messages
-- Rate limiting for API endpoints
-- Secure file storage and cleanup
+## 🔒 Security
+
+- API credentials stored securely outside version control
+- Input validation on all endpoints
+- CORS properly configured for production
+- Sensitive files excluded via `.gitignore`
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 1. **OCR Processing Fails**
-   - Check Mistral API connectivity and key validity
-   - Verify Google Cloud Vision API credentials are properly configured
-   - Verify Poppler installation for PDF processing
-   - Check backend logs for API errors
+   - Verify Google Cloud Vision API credentials
+   - Check Mistral API connectivity
+   - Ensure Poppler is properly installed
+   - Review backend logs for detailed errors
 
-2. **Frontend Can't Connect to Backend**
-   - Check if backend is running on port 8000
-   - Verify CORS settings in `main.py`
-   - Check browser console for network errors
+2. **Frontend Connection Issues**
+   - Confirm backend server is running on port 8001
+   - Check CORS configuration
+   - Verify API endpoint URLs
 
-3. **File Upload Issues**
-   - Ensure file is PDF format and under 50MB
-   - Check backend logs for processing errors
-   - Verify upload directory permissions
+3. **Upload Problems**
+   - Ensure PDF files are not corrupted
+   - Check file size limits
+   - Verify sufficient disk space
 
-### Logs
-- Frontend: Browser developer console
-- Backend: Terminal output where server is running
-- OCR Engine: Check console output during processing
-
-## 📋 Recent Updates
-
-### Version 2.1.0 (Latest)
-- **Arc Diagram Processing**: Added intelligent detection and separation of arc diagrams
-- **Google Vision Integration**: Integrated Google Cloud Vision API for enhanced diagram processing
-- **Bug Fixes**: Resolved React rendering errors with page data structure
-- **Security**: Removed sensitive credentials from git history and added comprehensive .gitignore
-- **Workflow Optimization**: Improved processing pipeline with dual OCR engine support
-
-### Key Improvements
-- Enhanced accuracy for technical drawings and engineering diagrams
-- Automatic fallback between OCR engines for optimal results
-- Improved error handling and user feedback
-- Better security practices for API credentials
+### Logging
+- Backend: Check console output for processing details
+- Frontend: Use browser developer tools for client-side issues
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## 🤝 Contributing
 
@@ -309,11 +184,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📞 Support
 
-For support and questions:
-- Check the troubleshooting section
-- Review API documentation
-- Create an issue on GitHub
+For issues and questions:
+- Create an issue in the repository
+- Check existing documentation
+- Review troubleshooting section
 
 ---
 
-**Built with ❤️ using React.js, FastAPI, and Mistral AI**
+**Built with ❤️ using React.js, FastAPI, and AI technologies**
