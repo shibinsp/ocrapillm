@@ -14,11 +14,12 @@ class ArcDiagramSeparator:
             similarity_threshold: Threshold for determining arc diagram similarity
         """
         self.similarity_threshold = similarity_threshold
+        current_dir = Path(__file__).parent
         self.sample_img_paths = [
-            "d:/trae/ocrapillm/sample_image/image1.png",
-            "d:/trae/ocrapillm/sample_image/image2.png",
-            "d:/trae/ocrapillm/sample_image/image3.png",
-            "d:/trae/ocrapillm/sample_image/image4.png"
+            str(current_dir / "sample_image" / "image1.png"),
+            str(current_dir / "sample_image" / "image2.png"),
+            str(current_dir / "sample_image" / "image3.png"),
+            str(current_dir / "sample_image" / "image4.png")
         ]
         self.sample_features = []
         self.orb = cv2.ORB_create(2000)

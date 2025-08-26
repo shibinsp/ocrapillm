@@ -40,7 +40,7 @@ class DatabaseOCR:
             'port': 5432,
             'database': 'LLMAPI',
             'user': 'postgres',
-            'password': 'shibin'
+            'password': 'sai'
         }
         
         # Ensure required packages are installed

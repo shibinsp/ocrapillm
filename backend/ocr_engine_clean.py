@@ -15,6 +15,8 @@ import sys
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import shutil
+from google.cloud import vision
+import os
 
 class DatabaseOCR:
     def __init__(self, api_key: str = "eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH", init_db: bool = True):
@@ -25,6 +27,11 @@ class DatabaseOCR:
         self.api_key = api_key
         self.base_url = "https://api.mistral.ai/v1/chat/completions"
         self.model = "pixtral-12b-2409"
+
+        # Google Cloud Vision API Configuration
+        self.vision_client = vision.ImageAnnotatorClient()
+        # Set Google Application Credentials environment variable
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path/to/your/google_vision_api_key.json" # Replace with your actual path
         
         # Headers for API requests
         self.headers = {
@@ -34,11 +41,11 @@ class DatabaseOCR:
         
         # Database Configuration
         self.db_config = {
-            'host': '127.0.0.1',
+            'host': 'localhost',                 #'127.0.0.1',
             'port': 5432,
             'database': 'LLMAPI',
             'user': 'postgres',
-            'password': 'shibin'
+            'password': 'sai'
         }
         
         # Ensure required packages are installed
@@ -198,6 +205,20 @@ class DatabaseOCR:
 
     def pdf_to_images(self, pdf_path: str, dpi: int = 300) -> List[Image.Image]:
         """Convert PDF to images"""
+
+    def is_arc_diagram(self, image: Image.Image) -> bool:
+        """Placeholder for arc diagram detection logic.
+        In a real application, this would involve image analysis (e.g., using OpenCV or ML models).
+        For now, it returns True for demonstration purposes.
+        """
+        # Implement actual arc diagram detection here
+        # This could involve:
+        # 1. Image segmentation to find distinct regions
+        # 2. Shape detection (circles, arcs, lines)
+        # 3. Text analysis (e.g., presence of specific keywords related to diagrams)
+        # 4. Machine learning models trained on arc diagrams
+        print("🔍 Running placeholder arc diagram detection...")
+        return True
         print(f"Converting PDF to images: {pdf_path}")
         try:
             images = convert_from_path(pdf_path, dpi=dpi)
@@ -247,48 +268,74 @@ class DatabaseOCR:
             print(f"🔄 Processing page {page_num} with Mistral Pixtral API...")
             
             # Make API request
-            response = requests.post(
-                self.base_url,
-                headers=self.headers,
-                json=payload,
-                timeout=60
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                extracted_text = result['choices'][0]['message']['content']
+            try:
+                response = requests.post(
+                    self.base_url,
+                    headers=self.headers,
+                    json=payload,
+                    timeout=60
+                )
+                response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
                 
-                print(f"✅ Successfully extracted text from page {page_num}")
-                
-                return {
-                    "success": True,
-                    "text": extracted_text,
-                    "page_number": page_num,
-                    "confidence": 0.95,  # Mistral API doesn't provide confidence, using default
-                    "method": "mistral_pixtral"
-                }
-            else:
-                error_msg = f"API request failed with status {response.status_code}: {response.text}"
+                if response.status_code == 200:
+                    result = response.json()
+                    extracted_text = result['choices'][0]['message']['content']
+                    
+                    print(f"✅ Successfully extracted text from page {page_num}")
+                    
+                    return {
+                        "success": True,
+                        "text": extracted_text,
+                        "page_number": page_num,
+                        "confidence": 0.95,  # Mistral API doesn't provide confidence, using default
+                        "method": "mistral_pixtral"
+                    }
+                else:
+                    error_msg = f"API request failed with status {response.status_code}: {response.text}"
+                    print(f"❌ {error_msg}")
+                    return {
+                        "success": False,
+                        "text": None,
+                        "page_number": page_num,
+                        "confidence": 0.0,
+                        "method": "mistral_pixtral",
+                        "error": error_msg
+                    }
+            except requests.exceptions.RequestException as e:
+                error_msg = f"Mistral API request failed: {e}"
                 print(f"❌ {error_msg}")
                 return {
                     "success": False,
-                    "error": error_msg,
-                    "page_number": page_num
+                    "text": None,
+                    "page_number": page_num,
+                    "confidence": 0.0,
+                    "method": "mistral_pixtral",
+                    "error": error_msg
                 }
-                
+
+
+
         except Exception as e:
-            error_msg = f"Error extracting text from page {page_num}: {str(e)}"
+            error_msg = f"Google Vision API request failed: {e}"
             print(f"❌ {error_msg}")
             return {
                 "success": False,
-                "error": error_msg,
-                "page_number": page_num
+                "text": None,
+                "page_number": page_num,
+                "confidence": 0.0,
+                "method": "google_vision",
+                "error": error_msg
             }
+                
 
-    def process_pdf_from_frontend(self, pdf_path: str, original_filename: str, output_dir: str = "outputs") -> Dict:
+
+    def process_pdf_from_frontend(self, doc_id: str, pdf_path: str, original_filename: str, file_size: int, mime_type: str, output_dir: str = "outputs") -> Dict:
         """Process PDF from frontend upload"""
         try:
-            print(f"🔄 Starting OCR processing for: {original_filename}")
+            print(f"🔄 Starting OCR processing for document {doc_id}: {original_filename}")
+
+            # Insert document info into DB
+            self.insert_document_info(doc_id, Path(pdf_path).name, original_filename, file_size, pdf_path, mime_type, len(images))
             
             # Convert PDF to images
             images = self.pdf_to_images(pdf_path)
@@ -300,14 +347,22 @@ class DatabaseOCR:
             for i, image in enumerate(images, 1):
                 print(f"🔄 Processing page {i}/{len(images)}...")
                 
-                # Extract text from image
-                ocr_result = self.extract_text_from_image(image, i)
+                # Determine which OCR method to use
+                if i == len(images) and self.is_arc_diagram(image):  # Assuming last page is arc diagram
+                    print(f"💡 Page {i} identified as potential arc diagram. Using Google Vision API...")
+                    ocr_result = self.extract_text_from_diagram_with_google_vision(image, i)
+                else:
+                    ocr_result = self.extract_text_from_image(image, i)
                 
+                page_id = str(uuid.uuid4())
                 if ocr_result["success"]:
                     page_text = ocr_result["text"]
                     all_text += f"\n\n--- Page {i} ---\n{page_text}"
                     
+                    self.insert_page_info(page_id, doc_id, i, extracted_text=page_text, confidence_score=ocr_result.get("confidence", 0.95), processing_method=ocr_result.get("method", "mistral_pixtral"))
+
                     results.append({
+                        "page_id": page_id,
                         "page_number": i,
                         "text": page_text,
                         "confidence": ocr_result.get("confidence", 0.95),
@@ -315,7 +370,9 @@ class DatabaseOCR:
                     })
                 else:
                     print(f"❌ Failed to process page {i}: {ocr_result.get('error', 'Unknown error')}")
+                    self.insert_page_info(page_id, doc_id, i, processing_status='failed')
                     results.append({
+                        "page_id": page_id,
                         "page_number": i,
                         "text": "",
                         "error": ocr_result.get("error", "Unknown error"),
@@ -340,8 +397,12 @@ class DatabaseOCR:
             print(f"✅ OCR processing completed for {original_filename}")
             print(f"📄 Results saved to: {text_output_path}")
             
+            # Update document status to completed
+            self.insert_document_info(doc_id, Path(pdf_path).name, original_filename, file_size, pdf_path, mime_type, len(images))
+
             return {
                 "success": True,
+                "document_id": doc_id,
                 "message": f"Successfully processed {len(images)} pages",
                 "total_pages": len(images),
                 "results": results,
@@ -356,6 +417,72 @@ class DatabaseOCR:
                 "success": False,
                 "error": error_msg
             }
+
+    def insert_document_info(self, doc_id: str, filename: str, original_filename: str, file_size: int, file_path: str, mime_type: str, total_pages: int) -> None:
+        """Insert document information into the database"""
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO documents (id, filename, original_filename, file_size, file_path, mime_type, processing_status, total_pages)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    filename = EXCLUDED.filename,
+                    original_filename = EXCLUDED.original_filename,
+                    file_size = EXCLUDED.file_size,
+                    file_path = EXCLUDED.file_path,
+                    mime_type = EXCLUDED.mime_type,
+                    processing_status = EXCLUDED.processing_status,
+                    total_pages = EXCLUDED.total_pages,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (doc_id, filename, original_filename, file_size, file_path, mime_type, 'processing', total_pages))
+            conn.commit()
+            print(f"✅ Document {doc_id} info inserted/updated in DB")
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ Error inserting document info: {e}")
+            raise
+        finally:
+            cursor.close()
+            conn.close()
+
+    def insert_page_info(self, page_id: str, document_id: str, page_number: int, image_data: bytes = None, extracted_text: str = None, confidence_score: float = None, processing_method: str = None) -> None:
+        """Insert page information and extracted content into the database"""
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO pages (id, document_id, page_number, image_data, processing_status)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    document_id = EXCLUDED.document_id,
+                    page_number = EXCLUDED.page_number,
+                    image_data = EXCLUDED.image_data,
+                    processing_status = EXCLUDED.processing_status,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (page_id, document_id, page_number, image_data, 'completed' if extracted_text else 'pending'))
+            
+            if extracted_text:
+                cursor.execute("""
+                    INSERT INTO extracted_content (id, page_id, content_type, extracted_text, confidence_score, processing_method)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        page_id = EXCLUDED.page_id,
+                        content_type = EXCLUDED.content_type,
+                        extracted_text = EXCLUDED.extracted_text,
+                        confidence_score = EXCLUDED.confidence_score,
+                        processing_method = EXCLUDED.processing_method
+                """, (str(uuid.uuid4()), page_id, 'text', extracted_text, confidence_score, processing_method))
+            
+            conn.commit()
+            print(f"✅ Page {page_number} info and content inserted/updated for document {document_id}")
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ Error inserting page info: {e}")
+            raise
+        finally:
+            cursor.close()
+            conn.close()
 
     def get_all_documents_text(self) -> str:
         """Get all extracted text from all documents in database"""

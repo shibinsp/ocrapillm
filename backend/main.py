@@ -79,7 +79,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 jobs = {}
 executor = ThreadPoolExecutor(max_workers=3)  # Limit concurrent OCR tasks
 
-async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: str):
+async def process_pdf_with_new_workflow(task_id: str, doc_id: str, file_path: str, filename: str):
     """
     New workflow: Separate arc diagrams and extract text from remaining content
     """
@@ -135,8 +135,8 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
         # Step 2: Process non-arc pages with existing OCR engine if available
         text_extraction_result = {"pages": [], "combined_text": "", "total_pages": 0}
         
-        if separation_result['non_arc_pages_count'] > 0 and ocr_processor:
-            print(f"🔍 Processing {separation_result['non_arc_pages_count']} non-arc pages with OCR engine...")
+        if separation_result['non_arc_count'] > 0 and ocr_processor:
+            print(f"🔍 Processing {separation_result['non_arc_count']} non-arc pages with OCR engine...")
             
             # Use the non-arc PDF if it was created
             non_arc_pdf_path = separation_result.get('non_arc_pdf_path')
@@ -159,8 +159,8 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
         # Step 3: Extract text from arc diagrams using Google Vision API
         arc_text_result = {"pages": [], "combined_text": "", "total_pages": 0}
         
-        if separation_result['arc_pages_count'] > 0:
-            print(f"📝 Extracting text from {separation_result['arc_pages_count']} arc diagram pages using Google Vision API...")
+        if separation_result['arc_count'] > 0:
+            print(f"📝 Extracting text from {separation_result['arc_count']} arc diagram pages using Google Vision API...")
             
             arc_pdf_path = separation_result.get('arc_pdf_path')
             if arc_pdf_path and Path(arc_pdf_path).exists():
@@ -197,8 +197,8 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
             "pages": total_pages,  # Ensure this is always a number
             "processing_time_ms": processing_time,
             "workflow_details": {
-                "arc_pages": separation_result['arc_pages_count'],
-                "non_arc_pages": separation_result['non_arc_pages_count'],
+                "arc_pages": separation_result['arc_count'],
+                "non_arc_pages": separation_result['non_arc_count'],
                 "total_pages": total_pages,
                 "arc_pdf_path": separation_result.get('arc_pdf_path'),
                 "non_arc_pdf_path": separation_result.get('non_arc_pdf_path')
@@ -251,8 +251,11 @@ async def process_ocr_task(task_id: str, file_path: str, filename: str):
             result = await loop.run_in_executor(
                 executor,
                 lambda: ocr_processor.process_pdf_from_frontend(
+                    doc_id=jobs[task_id]['doc_id'],
                     pdf_path=file_path,
                     original_filename=filename,
+                    file_size=Path(file_path).stat().st_size,
+                    mime_type="application/pdf",
                     output_dir=str(OUTPUT_DIR)
                 )
             )
@@ -298,34 +301,20 @@ async def upload_document(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        # Initialize job status
         jobs[task_id] = {
-            'status': 'uploaded',
-            'result': None,
-            'error': None,
-            'created_at': datetime.now().isoformat(),
-            'file_info': {
-                'filename': file.filename,
-                'size': file.size,
-                'doc_id': doc_id
-            }
+            "status": "pending",
+            "doc_id": doc_id,
+            "filename": file.filename,
+            "file_path": str(file_path),
+            "upload_time": datetime.now().isoformat()
         }
         
-        # Start new PDF workflow processing in background
-        asyncio.create_task(process_pdf_with_new_workflow(task_id, str(file_path), file.filename))
+        # Start OCR processing in the background
+        background_tasks.add_task(process_ocr_task, task_id, str(file_path), file.filename)
         
-        # Immediately respond with task ID
-        return {
-            "task_id": task_id,
-            "message": "Document uploaded successfully. Processing started.",
-            "status": "uploaded"
-        }
-        
+        return {"task_id": task_id, "doc_id": doc_id, "message": "Document upload and OCR processing started"}
     except Exception as e:
-        # Clean up file if upload failed
-        if file_path.exists():
-            file_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Failed to upload document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload document: {e}")
 
 @app.get("/task-status/{task_id}")
 async def get_task_status(task_id: str):
@@ -496,20 +485,32 @@ async def get_documents():
                 print("⏰ Database query timed out")
                 raise HTTPException(status_code=504, detail="Database query timeout - please try again")
             except Exception as db_error:
-                 print(f"💥 Database error: {db_error}")
-                 # Return mock data as fallback instead of empty list
-                 print("🔄 Falling back to mock data")
-                 return [
-                     {
-                         "id": "fallback-1",
-                         "name": "Fallback Document.pdf",
-                         "filename": "fallback.pdf",
-                         "size": 512000,
-                         "status": "completed",
-                         "pages": 1,
-                         "created_at": "2024-01-01T12:00:00Z"
-                     }
-                 ]
+                print(f"💥 Database error: {db_error}")
+                # Fallback: list PDFs from uploads directory so user sees their files
+                try:
+                    print("🔄 Falling back to listing files from uploads directory")
+                    upload_path = UPLOAD_DIR
+                    documents = []
+                    for file_path in upload_path.glob("*.pdf"):
+                        try:
+                            stat = file_path.stat()
+                            documents.append({
+                                "id": file_path.stem.split("_")[0],
+                                "name": file_path.name.split("_", 1)[-1] if "_" in file_path.name else file_path.name,
+                                "filename": file_path.name,
+                                "size": stat.st_size,
+                                "status": "completed",
+                                "pages": None,
+                                "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                            })
+                        except Exception as file_error:
+                            print(f"Warning: skipping file {file_path} due to error: {file_error}")
+                    print(f"📄 Returning {len(documents)} documents from uploads fallback")
+                    return sorted(documents, key=lambda d: d.get("created_at") or "", reverse=True)
+                except Exception as fs_error:
+                    print(f"💥 Fallback to uploads failed: {fs_error}")
+                    # Final minimal fallback
+                    return []
         
     except HTTPException:
         raise
@@ -1229,6 +1230,10 @@ async def export_document(doc_id: str, format: str = "txt"):
 
 @app.get("/documents/{doc_id}/pages")
 async def get_document_pages(doc_id: str):
+    try:
+        uuid.UUID(doc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid document ID format. Must be a valid UUID.")
     """Get document pages with images for validation"""
     try:
         if not ocr_processor:
