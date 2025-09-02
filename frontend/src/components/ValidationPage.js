@@ -83,7 +83,13 @@ const ValidationPage = ({ documentId, onClose }) => {
       setSaving(true);
       
       // Combine all page texts
-      const completeText = pages.map(page => page.extractedText || '').join('\n\n');
+      const completeText = pages
+        .map((page, i) =>
+          i === currentPageIndex
+            ? (extractedText || '')
+            : (page.extractedText || '')
+        )
+        .join('\n\n');
       
       await apiService.validateDocument(documentId, completeText);
       
@@ -96,7 +102,6 @@ const ValidationPage = ({ documentId, onClose }) => {
       setSaving(false);
     }
   };
-
   const nextPage = () => {
     if (currentPageIndex < pages.length - 1) {
       setCurrentPageIndex(currentPageIndex + 1);
@@ -193,9 +198,9 @@ const ValidationPage = ({ documentId, onClose }) => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+        <div className="flex gap-6 h-[calc(100vh-200px)]">
           {/* Left Side - Original Image */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -220,18 +225,18 @@ const ValidationPage = ({ documentId, onClose }) => {
                 </div>
               </div>
             </div>
-            <div className="p-4 h-full overflow-auto">
+            <div className="p-4 h-full overflow-auto flex justify-center">
               {currentPage.imageUrl ? (
-                <div className="flex justify-center">
+                <div className="flex justify-center items-start w-full">
                   <img
                     src={currentPage.imageUrl}
                     alt={`Page ${currentPageIndex + 1}`}
                     style={{ transform: `scale(${imageZoom})` }}
-                    className="max-w-full h-auto border border-gray-300 dark:border-gray-600 rounded"
+                    className="w-full h-[600px] object-contain border border-gray-300 dark:border-gray-600 rounded"
                   />
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-gray-700 rounded">
+                <div className="flex items-center justify-center h-64 w-full bg-gray-100 dark:bg-gray-700 rounded">
                   <p className="text-gray-500 dark:text-gray-400">No image available</p>
                 </div>
               )}
@@ -239,7 +244,7 @@ const ValidationPage = ({ documentId, onClose }) => {
           </div>
 
           {/* Right Side - Extracted Text */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -261,7 +266,7 @@ const ValidationPage = ({ documentId, onClose }) => {
               </div>
             </div>
             <div className="p-4 h-full flex justify-center">
-              <div className="w-full max-w-2xl">
+              <div className="w-full">
                 <textarea
                   value={extractedText}
                   onChange={(e) => handleTextChange(e.target.value)}
@@ -288,7 +293,7 @@ const ValidationPage = ({ documentId, onClose }) => {
             <div className="flex items-center space-x-2">
               {pages.map((page, index) => (
                 <button
-                  key={index}
+                  key={`page-${index}-${page.id || page.imageUrl || index}`}
                   onClick={() => goToPage(index)}
                   className={`w-10 h-10 rounded-lg text-sm font-medium ${
                     index === currentPageIndex

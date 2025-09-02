@@ -14,13 +14,20 @@ const UploadSection = () => {
     
     if (rejectedFiles.length > 0) {
       const error = rejectedFiles[0].errors[0];
+      let errorMessage = 'Invalid file';
+      
       if (error.code === 'file-invalid-type') {
-        actions.showError('Only PDF files are allowed');
+        errorMessage = '❌ Only PDF files are allowed. Please select a .pdf file.';
       } else if (error.code === 'file-too-large') {
-        actions.showError('File size must be less than 50MB');
+        const maxSizeMB = (50 * 1024 * 1024) / (1024 * 1024);
+        errorMessage = `❌ File size must be less than ${maxSizeMB}MB. Your file is too large.`;
+      } else if (error.code === 'too-many-files') {
+        errorMessage = '❌ Please select only one PDF file at a time.';
       } else {
-        actions.showError('Invalid file');
+        errorMessage = `❌ Invalid file: ${error.message}`;
       }
+      
+      actions.showError(errorMessage);
       return;
     }
     
@@ -29,8 +36,9 @@ const UploadSection = () => {
       try {
         validateFile(file);
         setSelectedFile(file);
+        actions.showSuccess('✅ File selected successfully! Click "Process Document" to begin.');
       } catch (error) {
-        actions.showError(error.message);
+        actions.showError(`❌ ${error.message}`);
       }
     }
   }, [actions]);
@@ -71,12 +79,19 @@ const UploadSection = () => {
         response.task_id,
         (status) => {
           // Update processing status based on real backend progress
-          let progressPercent = 20;
+          let progressPercent = status.progress || 0;
           let statusMessage = 'Processing document...';
           
           if (status.status === 'processing') {
-            progressPercent = 50;
-            statusMessage = 'Extracting text with OCR...';
+            if (progressPercent < 25) {
+              statusMessage = 'Analyzing document structure...';
+            } else if (progressPercent < 50) {
+              statusMessage = 'Separating diagrams...';
+            } else if (progressPercent < 75) {
+              statusMessage = 'Extracting text with OCR...';
+            } else {
+              statusMessage = 'Finalizing processing...';
+            }
           } else if (status.status === 'completed') {
             progressPercent = 100;
             statusMessage = 'Processing complete!';
@@ -106,6 +121,14 @@ const UploadSection = () => {
       actions.setCurrentDocument(newDocument);
       actions.setExtractedText(newDocument.extracted_text);
       
+      // Refresh documents list from backend to ensure consistency
+      try {
+        const documents = await apiService.getDocuments();
+        actions.setDocuments(documents.data || documents);
+      } catch (error) {
+        console.warn('Failed to refresh documents list:', error);
+      }
+      
       // Reset states
       actions.setUploading(false);
       actions.setProcessing({ isProcessing: false, status: '', progress: 0 });
@@ -118,9 +141,31 @@ const UploadSection = () => {
       
     } catch (error) {
       console.error('Upload error:', error);
+      
+      // Reset states
       actions.setUploading(false);
       actions.setProcessing({ isProcessing: false, status: '', progress: 0 });
-      actions.showError(error.message || 'Failed to upload document');
+      
+      // Show more specific error messages
+      let errorMessage = 'Failed to upload document';
+      
+      if (error.response) {
+        // Server responded with error
+        errorMessage = error.response.data?.detail || 
+                      error.response.data?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Network error
+        errorMessage = 'Network error: Please check your connection and ensure the backend server is running on port 8000';
+      } else {
+        // Other error
+        errorMessage = error.message || 'Unknown error occurred';
+      }
+      
+      actions.showError(errorMessage);
+      
+      // Clear selected file on error
+      setSelectedFile(null);
     }
   };
 

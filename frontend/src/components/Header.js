@@ -4,7 +4,7 @@ import { FiMenu, FiSun, FiMoon, FiSettings, FiHelpCircle } from 'react-icons/fi'
 
 const Header = () => {
   const { state, actions } = useApp();
-  const { darkMode, sidebarOpen, currentDocument } = state;
+  const { darkMode, currentDocument } = state;
 
   return (
     <header className="bg-white dark:bg-secondary-800 border-b border-secondary-200 dark:border-secondary-700 h-16 flex items-center justify-between px-4 lg:px-6 shadow-sm">

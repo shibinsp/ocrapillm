@@ -1,0 +1,224 @@
+# OCR Application Complete Workflow Documentation
+
+## System Overview
+The OCR application is a sophisticated document processing system that combines React.js frontend with FastAPI backend, featuring intelligent OCR processing and AI-powered chat capabilities.
+
+## Architecture Components
+
+### Frontend (React.js)
+- Main Application: App.js
+- Upload Interface: UploadSection.js
+- Text Editor: TextEditor.js
+- Chat Interface: ChatInterface.js
+- Document Management: DocumentList.js
+- State Management: AppContext.js (React Context API)
+- API Communication: api.js (Axios with retry logic)
+- UI Framework: Tailwind CSS
+
+### Backend (FastAPI)
+- Main Server: main.py (FastAPI with async processing)
+- OCR Engines:
+  * ocr_llm_engine.py (AI-enhanced OCR with Mistral Pixtral API)
+  * ocr_engine_clean.py (Standard OCR processing)
+- Specialized Modules:
+  * arc_diagram_separation.py (Arc diagram detection using OpenCV)
+  * text_extraction_from_diagram.py (Google Vision API integration)
+- Database: PostgreSQL with documents and pages tables
+
+## Complete Workflow Steps
+
+### Phase 1: Document Upload
+1. File Selection
+   - User drags/drops PDF or clicks to browse
+   - Maximum file size: 50MB
+   - Supported format: PDF only
+
+2. File Validation
+   - Frontend validates file type (.pdf only)
+   - Checks file size constraints
+   - Displays validation errors if needed
+
+3. Upload Process
+   - File sent to /upload/ endpoint via FormData
+   - Backend generates unique document_id using uuid.uuid4()
+   - PDF saved to filesystem with document ID in filename
+   - Document metadata saved to PostgreSQL documents table
+   - Background processing task initiated asynchronously
+   - Frontend receives task_id and document_id for tracking
+
+### Phase 2: Document Analysis
+1. Arc Diagram Detection
+   - ArcDiagramSeparator analyzes each PDF page
+   - Uses OpenCV ORB feature detection
+   - Compares against sample arc diagram images
+   - Calculates similarity scores using feature matching
+   - Separates pages into two categories:
+     * Arc Diagram Pages: Technical drawings requiring specialized processing
+     * Regular Pages: Standard text content
+
+2. Page Classification Results
+   - Arc pages: Processed with Google Vision API
+   - Non-arc pages: Processed with Mistral Pixtral OCR
+   - Fallback: If no pages detected, use Google Vision for all pages
+
+### Phase 3: Text Extraction
+
+#### For Arc Diagram Pages (Google Vision API):
+1. PDF pages converted to high-resolution images
+2. Images sent to Google Cloud Vision API
+3. Text detection with bounding box coordinates
+4. Handles complex diagrams and technical drawings
+5. Returns structured text with positional information
+
+#### For Regular Pages (Mistral Pixtral OCR):
+1. PDF converted to images using pdf2image
+2. Each image processed with Mistral Pixtral-12B model
+3. AI-enhanced text extraction with high accuracy
+4. Handles various fonts, layouts, and languages
+5. Returns extracted text with confidence scores
+
+### Phase 4: Processing & Storage
+1. Text Combination
+   - Results from both OCR methods merged
+   - Page order maintained from original document
+   - Combined into single structured output
+
+2. Database Storage
+   - Extracted text saved to documents.extracted_text
+   - Individual page data stored in pages table
+   - Processing metadata and timestamps recorded
+   - Document status updated to 'completed'
+
+3. Document Generation
+   - Creates Word document (.docx) with extracted content
+   - Saves complete text file (.txt) for backup
+   - Files stored in output directory
+
+4. Status Updates
+   - Real-time progress tracking via polling
+   - Status messages for each processing phase
+   - Error handling and recovery mechanisms
+
+### Phase 5: Frontend Integration
+1. Status Polling
+   - Frontend polls /jobs/{task_id}/status endpoint
+   - Receives real-time progress updates
+   - Handles processing status changes
+
+2. Progress Display
+   - ProcessingView shows detailed progress steps:
+     * Uploading File (0-5%)
+     * Saving to Database (5-10%)
+     * Analyzing Document (10-25%)
+     * Separating Arc Diagrams (25-35%)
+     * OCR Text Extraction (35-65%)
+     * Processing Diagrams (65-85%)
+     * Combining Results (85-95%)
+     * Finalizing Processing (95-100%)
+
+3. Document Integration
+   - New document object created with extracted text
+   - Added to frontend documents list
+   - Set as current active document
+   - Automatic navigation to Text Editor
+
+4. Text Editor Display
+   - Extracted text loaded in interactive editor
+   - Real-time editing capabilities
+   - Auto-save functionality
+   - Export options (TXT, DOCX)
+
+## Key Features
+
+### Intelligent OCR Processing
+- Dual Engine System: Automatically selects optimal OCR method
+- Fallback Mechanism: Google Vision API as backup for complex documents
+- High Accuracy: AI-powered text extraction with confidence scoring
+- Specialized Handling: Arc diagrams processed with computer vision
+
+### Real-time Processing
+- Async Background Tasks: Non-blocking document processing
+- Progress Tracking: Live status updates with detailed progress steps
+- Error Handling: Comprehensive error recovery and user feedback
+- Timeout Management: Proper handling of long-running processes
+
+### Document Management
+- Database Integration: PostgreSQL for persistent storage
+- Document Versioning: Track processing history and modifications
+- Export Options: Multiple output formats (TXT, DOCX)
+- Search Functionality: Full-text search across documents
+
+### AI Chat Integration
+- Document-Specific Chat: Ask questions about uploaded documents
+- Global Chat: General AI assistance across all documents
+- Context Awareness: AI understands document content for relevant responses
+- Chat History: Persistent conversation storage
+
+### User Experience
+- Drag & Drop Upload: Intuitive file upload interface
+- Real-time Editing: Interactive text editor with save functionality
+- Responsive Design: Works across desktop and mobile devices
+- Dark Mode Support: Theme switching capability
+- Error Recovery: Graceful handling of processing failures
+
+## Data Flow Summary
+
+1. Upload: PDF → Frontend → Backend → Database
+2. Processing: PDF → Arc Detection → Dual OCR → Text Combination
+3. Storage: Extracted Text → Database → Word Document
+4. Display: Database → API → Frontend → User Interface
+5. Interaction: User Edits → Auto-save → Database Updates
+
+## API Endpoints
+
+### Document Processing
+- POST /upload/ - Upload and process PDF documents
+- GET /jobs/{job_id}/status/ - Check processing status
+- GET /documents/ - List all documents
+- GET /documents/{doc_id}/content/ - Get document content
+- PUT /documents/{doc_id}/content/ - Update document content
+- DELETE /documents/{doc_id}/ - Delete document
+
+### Chat Functionality
+- POST /chat/ - AI chat with document context
+- GET /chat/history/{doc_id}/ - Get chat history
+- POST /chat/global/ - Global AI chat
+
+### System
+- GET /health/ - System health check
+
+## Error Handling
+
+### Upload Errors
+- File type validation
+- File size limits
+- Network connectivity issues
+- Server capacity limits
+
+### Processing Errors
+- OCR API failures
+- Database connection issues
+- File corruption handling
+- Timeout management
+
+### Recovery Mechanisms
+- Automatic retry logic
+- Fallback processing methods
+- User notification system
+- Manual retry options
+
+## Performance Considerations
+
+### Optimization Strategies
+- Async processing for non-blocking operations
+- Image compression for faster API calls
+- Database indexing for quick searches
+- Caching for frequently accessed documents
+
+### Scalability Features
+- Background task queuing
+- Load balancing capabilities
+- Database connection pooling
+- API rate limiting
+
+This workflow ensures high-quality text extraction from various document types while providing an intuitive user experience with real-time feedback and AI-powered assistance.

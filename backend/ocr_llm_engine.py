@@ -18,6 +18,23 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 
+# Load environment variables from .env files
+def load_env_file(env_path: str):
+    """Load environment variables from .env file"""
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
+# Load environment variables
+load_env_file('.env')
+load_env_file('.env.database')
+load_env_file('../.env')  # Try parent directory
+load_env_file('../.env.database')  # Try parent directory
+
 class DatabaseOCR:
     def __init__(self, api_key: str = "eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH"):
         """
@@ -34,13 +51,13 @@ class DatabaseOCR:
             "Authorization": f"Bearer {self.api_key}"
         }
         
-        # Database Configuration
+        # Database Configuration with environment variable support
         self.db_config = {
-            'host': '127.0.0.1',
-            'port': 5432,
-            'database': 'LLMAPI',
-            'user': 'postgres',
-            'password': 'shibin'
+            'host': os.getenv('DB_HOST', '127.0.0.1'),
+            'port': int(os.getenv('DB_PORT', 5432)),
+            'database': os.getenv('DB_NAME', 'LLMAPI'),
+            'user': os.getenv('DB_USER', 'postgres'),
+            'password': os.getenv('DB_PASSWORD', 'shibin')
         }
         
         # Ensure required packages are installed

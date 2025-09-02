@@ -1,0 +1,9 @@
+# Database Migration Requirements
+# Install with: pip install -r migration_requirements.txt
+
+# PostgreSQL adapter for Python
+psycopg2-binary>=2.9.0
+
+# Optional: For enhanced database operations
+sqlalchemy>=1.4.0
+alembic>=1.8.0

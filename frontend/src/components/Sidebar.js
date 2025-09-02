@@ -16,8 +16,15 @@ const Sidebar = () => {
   const handleDocumentSelect = (document) => {
     actions.setCurrentDocument(document);
     actions.setActiveTab('editor');
-    // Load document content and chat history
-    // This would typically trigger API calls to load the document data
+    
+    // Load document content
+    if (document.id.includes('fallback')) {
+      const fallbackText = 'This is a sample document for testing purposes.\n\nYou can edit this text and test the save functionality.\n\nThe OCR system would normally extract text from uploaded PDF documents.';
+      actions.setExtractedText(fallbackText);
+    } else {
+      // Load document content and chat history for real documents
+      // This would typically trigger API calls to load the document data
+    }
   };
 
   const handleDeleteDocument = async (documentId, event) => {

@@ -44,6 +44,16 @@ pip install -r requirements.txt
 ### 3. Environment Configuration
 - Place your Google Cloud Vision API credentials file as `backend/google_credentials.json`
 - Mistral API key is pre-configured in the system
+- **Stagewise Extension**: Multi-environment support for development, staging, and production:
+  1. Environment files are automatically created: `.env`, `.env.staging`, `.env.production`
+  2. Use deployment scripts: `deploy.bat` (Windows) or `deploy.ps1` (PowerShell)
+  3. See `STAGEWISE_SETUP.md` for detailed configuration guide
+- **Sentry Setup (Optional)**: For error monitoring and performance tracking:
+  1. Create a Sentry account at [sentry.io](https://sentry.io)
+  2. Create a new project for your application
+  3. Copy the DSN from your project settings
+  4. Add your Sentry DSN to the appropriate environment file
+  5. Configure both `SENTRY_DSN` and `REACT_APP_SENTRY_DSN`
 
 ### 4. Frontend Setup
 ```bash
@@ -53,13 +63,31 @@ npm install
 
 ## 🚀 Running the Application
 
-### Start Backend Server
+### Quick Start (Recommended)
+```bash
+# Use the automated startup script
+start_application.bat
+```
+
+### Stagewise Deployment
+```bash
+# Set up environment (development/staging/production)
+deploy.bat development
+# or
+.\deploy.ps1 staging
+
+# Then start the application
+start_application.bat
+```
+
+### Manual Start
+#### Start Backend Server
 ```bash
 cd backend
 uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-### Start Frontend Development Server
+#### Start Frontend Development Server
 ```bash
 cd frontend
 npm start
@@ -87,6 +115,13 @@ ocrapillm/
 │   │   └── services/                   # API service functions
 │   ├── package.json                    # Node.js dependencies
 │   └── tailwind.config.js             # Tailwind CSS configuration
+├── .env                                # Development environment config
+├── .env.staging                        # Staging environment config
+├── .env.production                     # Production environment config
+├── deploy.bat                          # Windows deployment script
+├── deploy.ps1                          # PowerShell deployment script
+├── start_application.bat               # Application startup script
+├── STAGEWISE_SETUP.md                  # Stagewise extension documentation
 └── README.md
 ```
 

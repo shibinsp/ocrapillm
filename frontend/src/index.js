@@ -5,15 +5,28 @@ import App from './App';
 import { AppProvider } from './context/AppContext';
 import { Toaster } from 'react-hot-toast';
 
+// Sentry configuration
+import * as Sentry from '@sentry/react';
+import { BrowserTracing } from '@sentry/tracing';
+
+// Initialize Sentry
+Sentry.init({
+  dsn: process.env.REACT_APP_SENTRY_DSN || 'https://ac81b3ddf471ac69ae20a2a822e794ab@o4509915357184000.ingest.de.sentry.io/4509925486493776',
+  integrations: [
+    new BrowserTracing(),
+  ],
+  tracesSampleRate: 1.0,
+  environment: process.env.NODE_ENV || 'development',
+});
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <AppProvider>
-      <App />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
+  <AppProvider>
+    <App />
+    <Toaster
+      position="top-right"
+      toastOptions={{
+        duration: 4000,
           style: {
             background: '#363636',
             color: '#fff',
@@ -27,5 +40,4 @@ root.render(
         }}
       />
     </AppProvider>
-  </React.StrictMode>
 );

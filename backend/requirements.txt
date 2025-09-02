@@ -13,7 +13,6 @@ python-docx==1.1.0
 Pillow==10.1.0
 numpy==1.24.3
 scipy==1.11.4
-poppler-utils==0.1.0
 
 # Google Cloud Vision API
 google-cloud-vision==3.4.5
@@ -30,3 +29,6 @@ scikit-image==0.22.0
 # Additional utilities
 python-dotenv==1.0.0
 typing-extensions==4.8.0
+
+# Error monitoring and performance tracking
+sentry-sdk[fastapi]==1.39.1

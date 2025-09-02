@@ -16,19 +16,31 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
 // Helper function for retry logic
+// Decide if a request should be retried
+const shouldRetry = (error) => {
+  // Never retry if the request was explicitly canceled
+  if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return false;
+  // Retry network/DNS failures (no response at all)
+  if (!error?.response) return true;
+  const s = error.response.status;
+  // Retry only on 408 (Request Timeout), 429 (Too Many Requests), server errors (5xx), or timeouts
+  return s === 408 || s === 429 || s >= 500 || error.code === 'ECONNABORTED';
+};
+
 const retryRequest = async (requestFn, retries = MAX_RETRIES) => {
   try {
     return await requestFn();
   } catch (error) {
-    if (retries > 0 && (error.code === 'ECONNABORTED' || error.message.includes('ERR_ABORTED') || !error.response)) {
-      console.log(`Retrying request... ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    if (retries > 0 && shouldRetry(error)) {
+      console.log(
+        `Retrying request... ${MAX_RETRIES - retries + 1}/${MAX_RETRIES}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
       return retryRequest(requestFn, retries - 1);
     }
     throw error;
   }
 };
-
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
@@ -49,22 +61,20 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Response Error:', error.response?.data || error.message);
-    
-    // Handle common errors
+
+    // Attach a friendly message but keep original error object for downstream logic.
     if (error.response?.status === 404) {
-      throw new Error('Resource not found');
-    } else if (error.response?.status === 500) {
-      throw new Error('Server error occurred');
+      error.friendlyMessage = 'Resource not found';
+    } else if (error.response?.status >= 500) {
+      error.friendlyMessage = 'Server error occurred';
     } else if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout - please try again');
+      error.friendlyMessage = 'Request timeout - please try again';
     } else if (!error.response) {
-      throw new Error('Network error - please check your connection');
+      error.friendlyMessage = 'Network error - please check your connection';
     }
-    
     return Promise.reject(error);
   }
 );
-
 // API endpoints
 export const apiService = {
   // Document upload and processing
@@ -141,33 +151,88 @@ export const apiService = {
   
   // Validate/update document text
   validateDocument: async (documentId, text) => {
-    const response = await api.post(`/validate/${documentId}`, {
-      validated_text: text,
+    // Special handling for fallback documents
+    if (documentId.includes('fallback')) {
+      // Simulate a successful save for testing
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ 
+            success: true, 
+            message: 'Fallback document saved successfully (simulated)' 
+          });
+        }, 1000); // Simulate 1 second processing time
+      });
+    }
+    
+    return await retryRequest(async () => {
+      const response = await api.post(`/validate/${documentId}`, {
+        validated_text: text,
+      });
+      return response.data;
     });
-    return response.data;
   },
   
-  // Get all documents
-  getDocuments: async () => {
+  // Auto-save document content
+  autoSaveDocument: async (documentId, text, saveType = 'auto') => {
+    // Special handling for fallback documents
+    if (documentId.includes('fallback')) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ 
+            success: true, 
+            message: `Fallback document ${saveType}-saved successfully`,
+            saved_at: new Date().toISOString(),
+            save_type: saveType
+          });
+        }, 500);
+      });
+    }
+    
+    return await retryRequest(async () => {
+      const response = await api.post(`/documents/${documentId}/auto-save`, {
+        validated_text: text,
+        save_type: saveType
+      });
+      return response.data;
+    });
+  },
+  
+  // Get all documents with enhanced error handling
+  getDocuments: async (page = 1, limit = 20, status = null) => {
     try {
       return await retryRequest(async () => {
-        const response = await api.get('/documents/');
+        const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+        if (status) params.append('status', status);
+        
+        const response = await api.get(`/documents/?${params}`);
         return response.data;
       });
     } catch (error) {
       console.warn('Failed to fetch documents from backend, using fallback data:', error.message);
-      // Return fallback data when backend is not available
-      return [
-        {
-          id: 'fallback-doc-1',
-          name: 'Sample Document.pdf',
-          filename: 'sample.pdf',
-          size: 1024000,
-          status: 'completed',
-          pages: 3,
-          created_at: new Date().toISOString()
+      // Return fallback data structure matching the new paginated format
+      return {
+        success: true,
+        data: [
+          {
+            id: 'fallback-doc-1',
+            name: 'Sample Document.pdf',
+            filename: 'sample.pdf',
+            size: 1024000,
+            status: 'completed',
+            pages: 3,
+            created_at: new Date().toISOString(),
+            extracted_text: 'This is a sample document for testing purposes.\n\nYou can edit this text and test the save functionality.\n\nThe OCR system would normally extract text from uploaded PDF documents.'
+          }
+        ],
+        pagination: {
+          current_page: page,
+          per_page: limit,
+          total_items: 1,
+          total_pages: 1,
+          has_next: false,
+          has_prev: false
         }
-      ];
+      };
     }
   },
   
@@ -203,8 +268,26 @@ export const apiService = {
 
   // Get document pages with images for validation
   getDocumentPages: async (documentId) => {
-    const response = await api.get(`/documents/${documentId}/pages`);
-    return response.data;
+    try {
+      const response = await api.get(`/documents/${documentId}/pages`);
+      console.log('API response for getDocumentPages:', response.data);
+      return response.data;
+    } catch (error) {
+      console.warn('Failed to fetch document pages:', error.message);
+      
+      // Special case for fallback documents
+      if (documentId.includes('fallback')) {
+        return [{
+          id: 1,
+          imageUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzY2NzM4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zNWVtIj5TYW1wbGUgRG9jdW1lbnQgUGFnZTwvdGV4dD48L3N2Zz4=',
+          pageNumber: 1,
+          document_id: documentId
+        }];
+      }
+      
+      // For real documents, re-throw the error so the frontend can handle it properly
+      throw error;
+    }
   },
 
   // Validate a specific page

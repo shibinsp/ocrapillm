@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { apiService, formatFileSize } from '../services/api';
-import { FiFile, FiTrash2, FiDownload, FiEye, FiSearch, FiFilter, FiCalendar, FiCheck, FiClock, FiAlertCircle, FiEdit3, FiX } from 'react-icons/fi';
+import { FiFile, FiTrash2, FiDownload, FiEye, FiSearch, FiFilter, FiCalendar, FiCheck, FiClock, FiAlertCircle, FiEdit3 } from 'react-icons/fi';
 
 const DocumentList = () => {
   const { state, actions } = useApp();
@@ -63,6 +63,13 @@ const DocumentList = () => {
 
   const loadDocumentContent = async (documentId) => {
     try {
+      // Special handling for fallback documents
+      if (documentId.includes('fallback')) {
+        const fallbackText = 'This is a sample document for testing purposes.\n\nYou can edit this text and test the save functionality.\n\nThe OCR system would normally extract text from uploaded PDF documents.';
+        actions.setExtractedText(fallbackText);
+        return;
+      }
+      
       const content = await apiService.getDocumentContent(documentId);
       actions.setExtractedText(content.text);
     } catch (error) {

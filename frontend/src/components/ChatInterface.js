@@ -196,7 +196,7 @@ const ChatInterface = ({ isPanel = false }) => {
                 'Summarize my library'
               ].map((suggestion, index) => (
                 <button
-                  key={index}
+                  key={`suggestion-${index}-${suggestion.replace(/\s+/g, '-').toLowerCase()}`}
                   onClick={() => setMessage(suggestion)}
                   className="text-left p-3 bg-white dark:bg-secondary-800 rounded-lg border border-secondary-200 dark:border-secondary-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors text-sm"
                 >

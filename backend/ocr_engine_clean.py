@@ -16,6 +16,23 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import shutil
 
+# Load environment variables from .env files
+def load_env_file(env_path: str):
+    """Load environment variables from .env file"""
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
+# Load environment variables
+load_env_file('.env')
+load_env_file('.env.database')
+load_env_file('../.env')  # Try parent directory
+load_env_file('../.env.database')  # Try parent directory
+
 class DatabaseOCR:
     def __init__(self, api_key: str = "eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH", init_db: bool = True):
         """
@@ -32,13 +49,13 @@ class DatabaseOCR:
             "Authorization": f"Bearer {self.api_key}"
         }
         
-        # Database Configuration
+        # Database Configuration with environment variable support
         self.db_config = {
-            'host': '127.0.0.1',
-            'port': 5432,
-            'database': 'LLMAPI',
-            'user': 'postgres',
-            'password': 'shibin'
+            'host': os.getenv('DB_HOST', '127.0.0.1'),
+            'port': int(os.getenv('DB_PORT', 5432)),
+            'database': os.getenv('DB_NAME', 'LLMAPI'),
+            'user': os.getenv('DB_USER', 'postgres'),
+            'password': os.getenv('DB_PASSWORD', 'shibin')
         }
         
         # Ensure required packages are installed
@@ -94,81 +111,99 @@ class DatabaseOCR:
             raise
     
     def init_database(self):
-        """Initialize database tables for OCR processing"""
+        """Initialize database tables for OCR processing with improved schema"""
         conn = self.get_db_connection()
         cursor = conn.cursor()
         
         try:
-            # Create documents table if not exists
+            # Create documents table with improved constraints
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS documents (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     filename VARCHAR(255) NOT NULL,
                     original_filename VARCHAR(255) NOT NULL,
-                    file_size BIGINT,
-                    file_path TEXT,
-                    mime_type VARCHAR(100),
+                    file_size BIGINT CHECK (file_size > 0),
+                    file_path TEXT UNIQUE,
+                    mime_type VARCHAR(100) DEFAULT 'application/pdf',
                     upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    processing_status VARCHAR(50) DEFAULT 'pending',
-                    total_pages INTEGER,
+                    processing_status VARCHAR(50) DEFAULT 'pending' 
+                        CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+                    total_pages INTEGER CHECK (total_pages >= 0),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
-            # Create pages table if not exists
+            # Create pages table with proper constraints
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS pages (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-                    page_number INTEGER NOT NULL,
-                    page_type VARCHAR(50) DEFAULT 'text',
+                    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    page_number INTEGER NOT NULL CHECK (page_number > 0),
+                    page_type VARCHAR(50) DEFAULT 'text' 
+                        CHECK (page_type IN ('text', 'diagram', 'arc', 'mixed')),
                     image_data BYTEA,
-                    processing_status VARCHAR(50) DEFAULT 'pending',
+                    processing_status VARCHAR(50) DEFAULT 'pending' 
+                        CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(document_id, page_number)
                 )
             """)
             
-            # Create extracted_content table if not exists
+            # Create extracted_content table with improved structure
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS extracted_content (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
                     page_id UUID REFERENCES pages(id) ON DELETE CASCADE,
-                    content_type VARCHAR(50) DEFAULT 'text',
-                    extracted_text TEXT,
-                    confidence_score FLOAT,
+                    content_type VARCHAR(50) DEFAULT 'complete_document' 
+                        CHECK (content_type IN ('complete_document', 'page_content', 'validated_document')),
+                    raw_text TEXT,
+                    processed_text TEXT,
+                    confidence_score FLOAT CHECK (confidence_score >= 0 AND confidence_score <= 1),
                     processing_method VARCHAR(100),
+                    metadata JSONB DEFAULT '{}',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
-            # Create chat_sessions table if not exists
+            # Create chat_sessions table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS chat_sessions (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-                    session_name VARCHAR(255),
+                    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    session_name VARCHAR(255) DEFAULT 'Chat Session',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
-            # Create chat_messages table if not exists
+            # Create chat_messages table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS chat_messages (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
-                    message_type VARCHAR(20) CHECK (message_type IN ('user', 'assistant')),
+                    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+                    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    message_type VARCHAR(20) NOT NULL CHECK (message_type IN ('user', 'assistant')),
                     content TEXT NOT NULL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
+            # Create indexes for better performance
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(processing_status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_upload_date ON documents(upload_date DESC)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_pages_document_id ON pages(document_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_pages_page_number ON pages(document_id, page_number)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_extracted_content_document_id ON extracted_content(document_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_extracted_content_type ON extracted_content(content_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_extracted_content_page_id ON extracted_content(page_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_document ON chat_messages(document_id)")
             conn.commit()
-            print("✅ Database tables initialized successfully")
+            print("✅ Database tables and indexes initialized successfully")
             
         except Exception as e:
             conn.rollback()

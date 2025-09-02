@@ -1,0 +1,41 @@
+{
+  "task": "Process uploaded file and extract text",
+  "steps": [
+    {
+      "step": "File Upload",
+      "action": "User uploads a file containing multiple pages."
+    },
+    {
+      "step": "Separation",
+      "action": "Split the file into two groups of pages",
+      "groups": {
+        "arc_diagrams": "Pages containing arc diagrams",
+        "other_pages": "Remaining pages without arc diagrams"
+      }
+    },
+    {
+      "step": "Text Extraction",
+      "actions": [
+        {
+          "group": "arc_diagrams",
+          "tool": "Google Cloud Vision API",
+          "output": "Extracted text from arc diagram pages"
+        },
+        {
+          "group": "other_pages",
+          "tool": "Mistral API",
+          "output": "Extracted text from non-arc pages"
+        }
+      ]
+    },
+    {
+      "step": "Combine Results",
+      "action": "Merge text extracted from both arc diagrams and other pages into a single structured output."
+    },
+    {
+      "step": "Frontend Display",
+      "action": "Show the combined extracted text in the frontend in the same format as the current implementation."
+    }
+  ],
+  "final_output": "Unified text extracted from both arc diagrams and other pages"
+}

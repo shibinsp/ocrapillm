@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useApp } from './context/AppContext';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -8,7 +8,6 @@ import TextEditor from './components/TextEditor';
 import ChatInterface from './components/ChatInterface';
 import DocumentList from './components/DocumentList';
 import ValidationPage from './components/ValidationPage';
-import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { apiService } from './services/api';
 
@@ -28,45 +27,72 @@ function App() {
   useEffect(() => {
     const loadDocuments = async () => {
       try {
+        // Clear any stale document state first
+        actions.setCurrentDocument(null);
+        actions.setExtractedText('');
+        
         const documents = await apiService.getDocuments();
-        actions.setDocuments(documents);
+        actions.setDocuments(documents.data || documents); // Handle both paginated and direct response
+        
+        // If there's a current document that doesn't exist in the fresh list, clear it
+        if (currentDocument) {
+          const documentExists = (documents.data || documents).some(doc => doc.id === currentDocument.id);
+          if (!documentExists) {
+            console.log('Current document no longer exists, clearing state');
+            actions.setCurrentDocument(null);
+            actions.setExtractedText('');
+          }
+        }
       } catch (error) {
         console.error('Failed to load documents:', error);
         actions.showError('Failed to load documents');
+        // Clear stale state on error too
+        actions.setCurrentDocument(null);
+        actions.setExtractedText('');
       }
     };
-
+    
     loadDocuments();
-  }, []);
+  }, []); // Empty dependency array to run only once on mount
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Ctrl+S for save
-      if (event.ctrlKey && event.key === 's') {
+      const key = (event.key || '').toLowerCase();
+      const el = event.target;
+      if (el && (
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.isContentEditable
+      )) {
+        return; // don't intercept while typing
+      }
+
+      // Ctrl/Cmd+S for save
+      if ((event.ctrlKey || event.metaKey) && key === 's') {
         event.preventDefault();
         if (activeTab === 'editor' && currentDocument) {
-          // Trigger save action
           console.log('Save shortcut triggered');
         }
+        return;
       }
-      
-      // Ctrl+D for dark mode toggle
-      if (event.ctrlKey && event.key === 'd') {
+
+      // Ctrl/Cmd+D for dark mode toggle
+      if ((event.ctrlKey || event.metaKey) && key === 'd') {
         event.preventDefault();
         actions.toggleDarkMode();
+        return;
       }
-      
-      // Escape to close sidebar on mobile
-      if (event.key === 'Escape' && window.innerWidth < 768) {
+
+      // Escape to close sidebar on mobile (only if it's open)
+      if (key === 'escape' && window.innerWidth < 768 && sidebarOpen) {
         actions.toggleSidebar();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, currentDocument, actions]);
-
+  }, [activeTab, currentDocument, sidebarOpen, actions]);
   const renderMainContent = () => {
     if (isUploading || isProcessing) {
       return <ProcessingView />;
