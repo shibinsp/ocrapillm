@@ -56,12 +56,23 @@ Write-Host "Stage-wise deployment setup complete for $Stage!" -ForegroundColor G
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "1. Update the environment variables in the appropriate .env file"
-Write-Host "2. Run the application using: .\start_application.bat"
+Write-Host "2. Configure PostgreSQL database settings"
+Write-Host "3. Run database migration: python database_migration.py"
+Write-Host "4. Install dependencies if not already done:"
+Write-Host "   - Backend: pip install -r backend/requirements.txt"
+Write-Host "   - Frontend: cd frontend && npm install"
+Write-Host "5. Run the application using: .\start_application.bat"
 Write-Host ""
 Write-Host "Environment files:" -ForegroundColor Cyan
 Write-Host "  - .env (development - default)"
 Write-Host "  - .env.staging (staging environment)"
 Write-Host "  - .env.production (production environment)"
 Write-Host "  - .env.current (currently active for non-development)"
+Write-Host "  - .env.database (template for database configuration)"
+Write-Host ""
+Write-Host "Database Setup:" -ForegroundColor Cyan
+Write-Host "  - See DATABASE_SETUP.md for detailed instructions"
+Write-Host "  - Ensure PostgreSQL is installed and running"
+Write-Host "  - Configure database credentials in your .env file"
 
 Read-Host "Press Enter to continue"

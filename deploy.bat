@@ -49,12 +49,23 @@ echo Stage-wise deployment setup complete for %STAGE%!
 echo.
 echo Next steps:
 echo 1. Update the environment variables in the appropriate .env file
-echo 2. Run the application using: start_application.bat
+echo 2. Configure PostgreSQL database settings
+echo 3. Run database migration: python database_migration.py
+echo 4. Install dependencies if not already done:
+echo    - Backend: pip install -r backend/requirements.txt
+echo    - Frontend: cd frontend ^&^& npm install
+echo 5. Run the application using: start_application.bat
 echo.
 echo Environment files:
 echo   - .env (development - default)
 echo   - .env.staging (staging environment)
 echo   - .env.production (production environment)
 echo   - .env.current (currently active for non-development)
+echo   - .env.database (template for database configuration)
+echo.
+echo Database Setup:
+echo   - See DATABASE_SETUP.md for detailed instructions
+echo   - Ensure PostgreSQL is installed and running
+echo   - Configure database credentials in your .env file
 
 pause
