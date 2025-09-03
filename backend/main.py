@@ -1459,7 +1459,7 @@ async def get_document_content(doc_id: str):
         cursor.execute("""
             SELECT raw_text 
             FROM extracted_content 
-            WHERE document_id = %s AND metadata->>'content_type' = 'complete_document'
+            WHERE document_id = %s AND content_type = 'complete_document'
             ORDER BY created_at DESC
             LIMIT 1
         """, (doc_id,))
@@ -2089,7 +2089,7 @@ async def export_document(doc_id: str, format: str = "txt"):
             cursor.execute("""
                 SELECT raw_text 
                 FROM extracted_content 
-                WHERE document_id = %s AND metadata->>'content_type' = 'complete_document'
+                WHERE document_id = %s AND content_type = 'complete_document'
                 ORDER BY created_at DESC
                 LIMIT 1
             """, (doc_id,))
