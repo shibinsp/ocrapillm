@@ -51,11 +51,13 @@ class DatabaseOCR:
         
         # Database Configuration with environment variable support
         self.db_config = {
-            'host': os.getenv('DB_HOST', '127.0.0.1'),
+            # 'host': os.getenv('DB_HOST', '127.0.0.1'),
+            'host': os.getenv('DB_HOST', 'localhost'),
             'port': int(os.getenv('DB_PORT', 5432)),
             'database': os.getenv('DB_NAME', 'LLMAPI'),
             'user': os.getenv('DB_USER', 'postgres'),
-            'password': os.getenv('DB_PASSWORD', 'shibin')
+            # 'password': os.getenv('DB_PASSWORD', 'shibin')
+            'password': os.getenv('DB_PASSWORD', 'sai')
         }
         
         # Ensure required packages are installed
@@ -116,6 +118,9 @@ class DatabaseOCR:
         cursor = conn.cursor()
         
         try:
+            # Ensure required extension for gen_random_uuid()
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+
             # Create documents table with improved constraints
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS documents (
@@ -202,6 +207,22 @@ class DatabaseOCR:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_extracted_content_page_id ON extracted_content(page_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_document ON chat_messages(document_id)")
+            
+            # Create unique constraint for extracted_content to support ON CONFLICT
+            cursor.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint 
+                        WHERE conname = 'extracted_content_document_type_unique'
+                    ) THEN
+                        ALTER TABLE extracted_content 
+                        ADD CONSTRAINT extracted_content_document_type_unique 
+                        UNIQUE (document_id, content_type);
+                    END IF;
+                END
+                $$;
+            """)
             conn.commit()
             print("✅ Database tables and indexes initialized successfully")
             

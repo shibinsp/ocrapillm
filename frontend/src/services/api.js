@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8001';
+// const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = 'http://localhost:8000';
+
 
 // Create axios instance with default config
 const api = axios.create({
@@ -82,7 +84,7 @@ export const apiService = {
     return await retryRequest(async () => {
       const formData = new FormData();
       formData.append('file', file);
-      
+
       const response = await api.post('/upload/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -95,11 +97,11 @@ export const apiService = {
           }
         },
       });
-      
+
       return response.data;
     });
   },
-  
+
   // Get task processing status
   getTaskStatus: async (taskId) => {
     return await retryRequest(async () => {
@@ -119,7 +121,7 @@ export const apiService = {
         try {
           attempts++;
           const status = await apiService.getTaskStatus(taskId);
-          
+
           if (onProgress) {
             onProgress(status);
           }
@@ -138,17 +140,17 @@ export const apiService = {
           reject(error);
         }
       };
-      
+
       poll();
     });
   },
-  
+
   // Get processed document content
   getDocumentContent: async (documentId) => {
     const response = await api.get(`/documents/${documentId}/content`);
     return response.data;
   },
-  
+
   // Validate/update document text
   validateDocument: async (documentId, text) => {
     // Special handling for fallback documents
@@ -156,14 +158,14 @@ export const apiService = {
       // Simulate a successful save for testing
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve({ 
-            success: true, 
-            message: 'Fallback document saved successfully (simulated)' 
+          resolve({
+            success: true,
+            message: 'Fallback document saved successfully (simulated)'
           });
         }, 1000); // Simulate 1 second processing time
       });
     }
-    
+
     return await retryRequest(async () => {
       const response = await api.post(`/validate/${documentId}`, {
         validated_text: text,
@@ -171,15 +173,15 @@ export const apiService = {
       return response.data;
     });
   },
-  
+
   // Auto-save document content
   autoSaveDocument: async (documentId, text, saveType = 'auto') => {
     // Special handling for fallback documents
     if (documentId.includes('fallback')) {
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve({ 
-            success: true, 
+          resolve({
+            success: true,
             message: `Fallback document ${saveType}-saved successfully`,
             saved_at: new Date().toISOString(),
             save_type: saveType
@@ -187,7 +189,7 @@ export const apiService = {
         }, 500);
       });
     }
-    
+
     return await retryRequest(async () => {
       const response = await api.post(`/documents/${documentId}/auto-save`, {
         validated_text: text,
@@ -196,14 +198,14 @@ export const apiService = {
       return response.data;
     });
   },
-  
+
   // Get all documents with enhanced error handling
   getDocuments: async (page = 1, limit = 20, status = null) => {
     try {
       return await retryRequest(async () => {
         const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
         if (status) params.append('status', status);
-        
+
         const response = await api.get(`/documents/?${params}`);
         return response.data;
       });
@@ -235,13 +237,13 @@ export const apiService = {
       };
     }
   },
-  
+
   // Delete document
   deleteDocument: async (documentId) => {
     const response = await api.delete(`/documents/${documentId}`);
     return response.data;
   },
-  
+
   // Chat with AI about document
   chatWithDocument: async (documentId, message, chatHistory = []) => {
     const response = await api.post(`/chat/${documentId}`, {
@@ -250,7 +252,7 @@ export const apiService = {
     });
     return response.data;
   },
-  
+
   // Get chat history for document
   getChatHistory: async (documentId) => {
     const response = await api.get(`/documents/${documentId}/chat`);
@@ -274,7 +276,7 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.warn('Failed to fetch document pages:', error.message);
-      
+
       // Special case for fallback documents
       if (documentId.includes('fallback')) {
         return [{
@@ -284,7 +286,7 @@ export const apiService = {
           document_id: documentId
         }];
       }
-      
+
       // For real documents, re-throw the error so the frontend can handle it properly
       throw error;
     }
@@ -297,7 +299,7 @@ export const apiService = {
     });
     return response.data;
   },
-  
+
   // Export document
   exportDocument: async (documentId, format = 'txt') => {
     const response = await api.get(`/documents/${documentId}/export`, {
@@ -306,7 +308,7 @@ export const apiService = {
     });
     return response.data;
   },
-  
+
   // Search within document
   searchDocument: async (documentId, query) => {
     const response = await api.post(`/documents/${documentId}/search`, {
@@ -314,7 +316,7 @@ export const apiService = {
     });
     return response.data;
   },
-  
+
   // Health check
   healthCheck: async () => {
     const response = await api.get('/health');
@@ -345,15 +347,15 @@ export const formatFileSize = (bytes) => {
 export const validateFile = (file) => {
   const maxSize = 50 * 1024 * 1024; // 50MB
   const allowedTypes = ['application/pdf'];
-  
+
   if (!allowedTypes.includes(file.type)) {
     throw new Error('Only PDF files are allowed');
   }
-  
+
   if (file.size > maxSize) {
     throw new Error('File size must be less than 50MB');
   }
-  
+
   return true;
 };
 

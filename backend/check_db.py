@@ -2,11 +2,13 @@ import psycopg2
 
 try:
     conn = psycopg2.connect(
-        host='127.0.0.1',
+        # host='127.0.0.1',
+        host='localhost',
         port=5432,
         database='LLMAPI',
         user='postgres',
-        password='shibin'
+        # password='shibin'
+        password='sai'
     )
     cursor = conn.cursor()
     

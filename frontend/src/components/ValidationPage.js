@@ -31,15 +31,15 @@ const ValidationPage = ({ documentId, onClose }) => {
   const fetchDocumentData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch document details
       const docResponse = await apiService.getDocumentContent(documentId);
       setDocument(docResponse);
-      
+
       // Fetch document pages with images and text
       const pagesResponse = await apiService.getDocumentPages(documentId);
       setPages(pagesResponse);
-      
+
     } catch (error) {
       console.error('Error fetching document data:', error);
       alert('Failed to load document data');
@@ -55,12 +55,12 @@ const ValidationPage = ({ documentId, onClose }) => {
 
   const handleSavePage = async () => {
     if (!hasChanges) return;
-    
+
     try {
       setSaving(true);
-      
+
       await apiService.validatePage(documentId, pages[currentPageIndex].id, extractedText);
-      
+
       // Update the page data
       const updatedPages = [...pages];
       updatedPages[currentPageIndex].extractedText = extractedText;
@@ -68,7 +68,7 @@ const ValidationPage = ({ documentId, onClose }) => {
       setPages(updatedPages);
       setOriginalText(extractedText);
       setHasChanges(false);
-      
+
       alert('Page validated and saved successfully!');
     } catch (error) {
       console.error('Error saving validation:', error);
@@ -81,7 +81,7 @@ const ValidationPage = ({ documentId, onClose }) => {
   const handleSaveAllPages = async () => {
     try {
       setSaving(true);
-      
+
       // Combine all page texts
       const completeText = pages
         .map((page, i) =>
@@ -90,9 +90,9 @@ const ValidationPage = ({ documentId, onClose }) => {
             : (page.extractedText || '')
         )
         .join('\n\n');
-      
+
       await apiService.validateDocument(documentId, completeText);
-      
+
       alert('All pages validated and saved successfully!');
       onClose();
     } catch (error) {
@@ -174,11 +174,10 @@ const ValidationPage = ({ documentId, onClose }) => {
               <button
                 onClick={handleSavePage}
                 disabled={!hasChanges || saving}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-                  hasChanges && !saving
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${hasChanges && !saving
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
               >
                 <FiSave className="h-4 w-4" />
                 <span>{saving ? 'Saving...' : 'Save Page'}</span>
@@ -289,17 +288,16 @@ const ValidationPage = ({ documentId, onClose }) => {
             >
               Previous Page
             </button>
-            
+
             <div className="flex items-center space-x-2">
               {pages.map((page, index) => (
                 <button
                   key={`page-${index}-${page.id || page.imageUrl || index}`}
                   onClick={() => goToPage(index)}
-                  className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                    index === currentPageIndex
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  } ${page.validated ? 'ring-2 ring-green-500' : ''}`}
+                  className={`w-10 h-10 rounded-lg text-sm font-medium ${index === currentPageIndex
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    } ${page.validated ? 'ring-2 ring-green-500' : ''}`}
                 >
                   {index + 1}
                   {page.validated && (
@@ -308,7 +306,7 @@ const ValidationPage = ({ documentId, onClose }) => {
                 </button>
               ))}
             </div>
-            
+
             <button
               onClick={nextPage}
               disabled={currentPageIndex === pages.length - 1}

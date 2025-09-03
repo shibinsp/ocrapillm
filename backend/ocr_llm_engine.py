@@ -53,11 +53,13 @@ class DatabaseOCR:
         
         # Database Configuration with environment variable support
         self.db_config = {
-            'host': os.getenv('DB_HOST', '127.0.0.1'),
+            # 'host': os.getenv('DB_HOST', '127.0.0.1'),
+            'host': os.getenv('DB_HOST', 'localhost'),
             'port': int(os.getenv('DB_PORT', 5432)),
             'database': os.getenv('DB_NAME', 'LLMAPI'),
             'user': os.getenv('DB_USER', 'postgres'),
-            'password': os.getenv('DB_PASSWORD', 'shibin')
+            # 'password': os.getenv('DB_PASSWORD', 'shibin')
+            'password': os.getenv('DB_PASSWORD', 'sai')
         }
         
         # Ensure required packages are installed

@@ -23,11 +23,13 @@ MODEL_NAME = "qwen2.5vl"
 
 # Database Configuration
 DB_CONFIG = {
-    'host': '127.0.0.1',
+    # 'host': '127.0.0.1',
+    'host': 'localhost',
     'port': 5432,
     'database': 'LLMAPI',
     'user': 'postgres',
-    'password': 'shibin'
+    # 'password': 'shibin'
+    'password': 'sai'
 }
 
 # Optional: set if poppler not in PATH

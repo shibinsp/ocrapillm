@@ -55,11 +55,13 @@ def validate_environment():
     try:
         import psycopg2
         db_config = {
-            'host': '127.0.0.1',
+            # 'host': '127.0.0.1',
+            'host': 'localhost',
             'port': 5432,
             'database': 'LLMAPI',
             'user': 'postgres',
-            'password': 'shibin'
+            # 'password': 'shibin'
+            'password': 'sai'
         }
         conn = psycopg2.connect(**db_config)
         conn.close()
@@ -133,7 +135,7 @@ else:
 try:
     from ocr_engine_clean import DatabaseOCR
     logger.info("[OK] OCR engine imported successfully")
-    # Initialize OCR processor without immediate database connection
+    # Initialize OCR processor and database tables on startup
     ocr_processor = DatabaseOCR(api_key="eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH", init_db=False)
     logger.info("[OK] OCR engine initialized successfully")
 except Exception as e:
@@ -362,17 +364,16 @@ async def save_document_pages_as_images(document_id: str, pdf_path: str, cursor)
     """Save document pages as images for book view display"""
     try:
         from pdf2image import convert_from_path
-        import base64
         import io
         
         # Convert PDF pages to images
         pages = convert_from_path(pdf_path, dpi=150, fmt='JPEG')
         
         for page_num, page_image in enumerate(pages, 1):
-            # Convert PIL image to base64
+            # Convert PIL image to raw JPEG bytes (store raw bytes in DB)
             img_buffer = io.BytesIO()
             page_image.save(img_buffer, format='JPEG', quality=85)
-            img_data = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
+            img_bytes = img_buffer.getvalue()
             
             # Save to database
             cursor.execute("""
@@ -386,7 +387,7 @@ async def save_document_pages_as_images(document_id: str, pdf_path: str, cursor)
                 document_id,
                 page_num,
                 'standard',
-                img_data.encode('utf-8'),
+                img_bytes,
                 'completed',
                 datetime.now()
             ))
@@ -426,22 +427,31 @@ async def process_fallback_workflow(task_id: str, file_path: str, filename: str,
                 total_pages = fallback_result.get('total_pages', 0)
                 extracted_text = fallback_result.get('combined_text', '')
                 
-                # Update document record
+                # Insert or update document record
                 cursor.execute("""
-                    UPDATE documents 
-                    SET processing_status = %s, total_pages = %s, updated_at = %s
-                    WHERE id = %s
-                """, ('completed', total_pages, datetime.now(), document_id))
+                    INSERT INTO documents (id, filename, original_filename, file_size, file_path, processing_status, created_at, total_pages)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        processing_status = EXCLUDED.processing_status,
+                        total_pages = EXCLUDED.total_pages,
+                        updated_at = EXCLUDED.created_at
+                """, (document_id, filename, filename, os.path.getsize(file_path), file_path, 'completed', datetime.now(), total_pages))
                 
                 # Save extracted content
                 if extracted_text:
                     cursor.execute("""
-                        INSERT INTO extracted_content (id, document_id, content_type, raw_text, confidence_score, processing_method, metadata, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, confidence_score, processing_method, metadata, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (document_id, content_type) DO UPDATE SET
+                            raw_text = EXCLUDED.raw_text,
+                            processed_text = EXCLUDED.processed_text,
+                            metadata = EXCLUDED.metadata,
+                            updated_at = CURRENT_TIMESTAMP
                     """, (
                         str(uuid.uuid4()),
                         document_id,
-                        'full_document',
+                        'complete_document',
+                        extracted_text,
                         extracted_text,
                         0.95,
                         'google_vision_fallback',
@@ -515,12 +525,15 @@ async def process_ocr_task_enhanced(task_id: str, file_path: str, filename: str,
                         conn = ocr_processor.get_db_connection()
                         cursor = conn.cursor()
                         
-                        # Update document
+                        # Insert or update document
                         cursor.execute("""
-                            UPDATE documents 
-                            SET processing_status = %s, total_pages = %s, updated_at = %s
-                            WHERE id = %s
-                        """, ('completed', result.get('total_pages', 0), datetime.now(), document_id))
+                            INSERT INTO documents (id, filename, original_filename, file_size, file_path, processing_status, created_at, total_pages)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (id) DO UPDATE SET
+                                processing_status = EXCLUDED.processing_status,
+                                total_pages = EXCLUDED.total_pages,
+                                updated_at = EXCLUDED.created_at
+                        """, (document_id, filename, filename, os.path.getsize(file_path), file_path, 'completed', datetime.now(), result.get('total_pages', 0)))
                         
                         # Save page images
                         await save_document_pages_as_images(document_id, file_path, cursor)
@@ -575,6 +588,38 @@ async def startup_event():
     """Initialize background tasks on startup"""
     logger.info("Starting background cleanup task")
     asyncio.create_task(periodic_cleanup())
+    try:
+        # Ensure database schema exists so uploads can be saved
+        if ocr_processor and hasattr(ocr_processor, 'ensure_database_initialized'):
+            ocr_processor.ensure_database_initialized()
+            logger.info("[OK] Database schema ensured on startup")
+
+        # Ensure required unique constraints/indexes exist for UPSERTs
+        if ocr_processor:
+            conn = ocr_processor.get_db_connection()
+            cur = conn.cursor()
+            try:
+                # Create the unique index used by ON CONFLICT (document_id, page_number)
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_indexes 
+                            WHERE schemaname = 'public' AND indexname = 'pages_document_page_unique'
+                        ) THEN
+                            CREATE UNIQUE INDEX pages_document_page_unique
+                            ON pages(document_id, page_number);
+                        END IF;
+                    END
+                    $$;
+                """)
+                conn.commit()
+                logger.info("[OK] Verified unique index on pages(document_id, page_number)")
+            finally:
+                cur.close()
+                conn.close()
+    except Exception as e:
+        logger.error(f"[WARN] Failed to ensure database on startup: {e}")
 
 async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: str, document_id: str):
     """
@@ -857,14 +902,22 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
                 
                 # Save extracted content
                 cursor.execute("""
-                    INSERT INTO extracted_content (document_id, raw_text, processed_text, metadata)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (document_id) DO UPDATE SET
+                    INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, metadata, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (document_id, content_type) DO UPDATE SET
                         raw_text = EXCLUDED.raw_text,
                         processed_text = EXCLUDED.processed_text,
-                        metadata = EXCLUDED.metadata
-                """, (document_id, combined_text.strip(), combined_text.strip(), 
-                      json.dumps({"workflow": "new_workflow", "total_pages": total_pages})))
+                        metadata = EXCLUDED.metadata,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (str(uuid.uuid4()), document_id, 'complete_document', combined_text.strip(), combined_text.strip(), 
+                      json.dumps({"workflow": "new_workflow", "total_pages": total_pages}), datetime.now()))
+                
+                # Update document status to completed
+                cursor.execute("""
+                    UPDATE documents 
+                    SET processing_status = 'completed', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (document_id,))
                 
                 conn.commit()
                 cursor.close()
@@ -1090,6 +1143,23 @@ async def upload_document(file: UploadFile = File(...)):
             }
         }
         
+        # Create initial document record so it appears in Documents list immediately
+        if ocr_processor:
+            try:
+                conn = ocr_processor.get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO documents (id, filename, original_filename, file_size, file_path, processing_status, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO NOTHING
+                """, (doc_id, filename, filename, file_path.stat().st_size, str(file_path), 'processing', datetime.now()))
+                conn.commit()
+                cursor.close()
+                conn.close()
+                logger.info(f"Initial document record created for {doc_id}")
+            except Exception as e:
+                logger.warning(f"Failed to create initial document record: {e}")
+        
         # Start new PDF workflow processing in background
         asyncio.create_task(process_pdf_with_new_workflow(task_id, str(file_path), filename, doc_id))
         
@@ -1274,12 +1344,16 @@ async def get_documents(page: int = 1, limit: int = 20, status: Optional[str] = 
                 
                 # Get paginated documents
                 query = f"""
-                    SELECT id, filename, original_filename, file_size, 
-                           processing_status as status, total_pages as pages,
-                           upload_date as created_at
-                    FROM documents 
+                    SELECT id,
+                           filename,
+                           COALESCE(original_filename, filename) AS original_filename,
+                           file_size,
+                           processing_status AS status,
+                           total_pages AS pages,
+                           COALESCE(upload_date, created_at) AS created_at
+                    FROM documents
                     {where_clause}
-                    ORDER BY upload_date DESC
+                    ORDER BY COALESCE(upload_date, created_at) DESC NULLS LAST
                     LIMIT %s OFFSET %s
                 """
                 
@@ -1437,17 +1511,31 @@ async def get_document_content(doc_id: str):
         
         total_pages = doc_result[0]
         
-        # Get complete text from extracted_content
+        # Prefer validated text if present, then complete_document
+        complete_text = ""
+
+        # 1) Validated text (highest priority)
         cursor.execute("""
-            SELECT raw_text 
+            SELECT processed_text 
             FROM extracted_content 
-            WHERE document_id = %s AND metadata->>'content_type' = 'complete_document'
-            ORDER BY created_at DESC
+            WHERE document_id = %s AND content_type = 'validated_document'
+            ORDER BY updated_at DESC NULLS LAST, created_at DESC
             LIMIT 1
         """, (doc_id,))
-        
-        result = cursor.fetchone()
-        complete_text = result[0] if result else ""
+        row = cursor.fetchone()
+        if row and row[0]:
+            complete_text = row[0]
+        else:
+            # 2) Complete document text
+            cursor.execute("""
+                SELECT raw_text 
+                FROM extracted_content 
+                WHERE document_id = %s AND content_type = 'complete_document'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (doc_id,))
+            result = cursor.fetchone()
+            complete_text = result[0] if result else ""
         
         # If no complete document found, try to get all page content
         if not complete_text:
@@ -1568,9 +1656,22 @@ async def auto_save_document(
         # Check if document exists
         cursor.execute("SELECT id FROM documents WHERE id = %s", (doc_id,))
         if not cursor.fetchone():
-            cursor.close()
-            conn.close()
-            raise HTTPException(status_code=404, detail="Document not found")
+            # Gracefully create a minimal document record to avoid 404 on first auto-save
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO documents (id, filename, original_filename, file_size, processing_status, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    (doc_id, 'unknown.pdf', 'unknown.pdf', 1, 'completed', datetime.now())
+                )
+            except Exception as insert_err:
+                # If creation fails, return a clear error
+                conn.rollback()
+                cursor.close()
+                conn.close()
+                raise HTTPException(status_code=404, detail=f"Document not found and could not be created: {insert_err}")
         
         # Update or insert validated content
         cursor.execute("""
@@ -1703,7 +1804,7 @@ async def chat_with_document(doc_id: str, chat_data: ChatMessage):
             SELECT d.id, ec.raw_text
             FROM documents d
             LEFT JOIN extracted_content ec ON d.id = ec.document_id 
-                AND ec.metadata->>'content_type' = 'complete_document'
+                AND ec.content_type = 'complete_document'
             WHERE d.id = %s
         """, (doc_id,))
         
@@ -2067,17 +2168,27 @@ async def export_document(doc_id: str, format: str = "txt"):
         base_name = original_filename.replace('.pdf', '') if original_filename else filename.replace('.pdf', '')
         
         if format == "txt":
-            # Get complete text from database
+            # Prefer validated text; fallback to complete_document
             cursor.execute("""
-                SELECT raw_text 
+                SELECT processed_text 
                 FROM extracted_content 
-                WHERE document_id = %s AND metadata->>'content_type' = 'complete_document'
-                ORDER BY created_at DESC
+                WHERE document_id = %s AND content_type = 'validated_document'
+                ORDER BY updated_at DESC NULLS LAST, created_at DESC
                 LIMIT 1
             """, (doc_id,))
+            row = cursor.fetchone()
+            complete_text = row[0] if row and row[0] else ""
             
-            result = cursor.fetchone()
-            complete_text = result[0] if result else ""
+            if not complete_text:
+                cursor.execute("""
+                    SELECT raw_text 
+                    FROM extracted_content 
+                    WHERE document_id = %s AND content_type = 'complete_document'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (doc_id,))
+                result = cursor.fetchone()
+                complete_text = result[0] if result else ""
             
             # If no complete document found, try to get all page content
             if not complete_text:
@@ -2141,7 +2252,63 @@ async def export_document(doc_id: str, format: str = "txt"):
                     media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             else:
-                raise HTTPException(status_code=404, detail="DOCX file not found. Document may not have been processed yet.")
+                # Generate DOCX on the fly from DB extracted text
+                try:
+                    from docx import Document as DocxDocument
+                except Exception:
+                    # Lazy install if missing in the environment
+                    try:
+                        import subprocess, sys as _sys
+                        subprocess.check_call([_sys.executable, "-m", "pip", "install", "python-docx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        from docx import Document as DocxDocument
+                    except Exception as _e:
+                        raise HTTPException(status_code=500, detail=f"DOCX generation unavailable: {_e}")
+
+                # Re-open DB to fetch text
+                conn2 = ocr_processor.get_db_connection()
+                cur2 = conn2.cursor()
+                cur2.execute("""
+                    SELECT raw_text 
+                    FROM extracted_content 
+                    WHERE document_id = %s AND content_type = 'complete_document'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (doc_id,))
+                row = cur2.fetchone()
+                complete_text = row[0] if row else ""
+
+                if not complete_text:
+                    # Fallback: stitch page texts
+                    cur2.execute("""
+                        SELECT raw_text 
+                        FROM extracted_content 
+                        WHERE document_id = %s AND page_id IS NOT NULL
+                        ORDER BY metadata->>'page_number'
+                    """, (doc_id,))
+                    page_rows = cur2.fetchall()
+                    if page_rows:
+                        complete_text = "\n\n".join([r[0] for r in page_rows if r and r[0]])
+
+                cur2.close()
+                conn2.close()
+
+                if not complete_text:
+                    raise HTTPException(status_code=404, detail="No extracted text available to generate DOCX")
+
+                # Build DOCX
+                doc = DocxDocument()
+                for paragraph in complete_text.split("\n\n"):
+                    doc.add_paragraph(paragraph)
+
+                OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+                generated_path = OUTPUT_DIR / f"{doc_id}_{base_name}_extracted.docx"
+                doc.save(str(generated_path))
+
+                return FileResponse(
+                    path=generated_path,
+                    filename=f"{base_name}.docx",
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
         
         else:
             raise HTTPException(status_code=400, detail="Unsupported export format. Use 'txt' or 'docx'.")
@@ -2218,15 +2385,45 @@ async def get_document_pages(doc_id: str):
         """, (doc_id,))
         
         pages = []
-        for row in cursor.fetchall():
+        fetched_rows = cursor.fetchall()
+        for row in fetched_rows:
             page_id, page_number, image_data, extracted_text = row
             
             # Convert image data to base64 for frontend display
             image_url = None
             if image_data:
                 import base64
-                image_base64 = base64.b64encode(image_data).decode('utf-8')
-                image_url = f"data:image/jpeg;base64,{image_base64}"
+                # Handle both raw bytes and already-base64-encoded strings stored previously
+                try:
+                    # If it's a memoryview, convert to bytes first
+                    if isinstance(image_data, memoryview):
+                        image_bytes = image_data.tobytes()
+                    else:
+                        image_bytes = image_data
+
+                    # Heuristic: if the bytes look like ASCII base64 (only base64 charset and '=' padding)
+                    is_ascii = False
+                    try:
+                        sample = image_bytes[:64]
+                        sample.decode('ascii')
+                        is_ascii = True
+                    except Exception:
+                        is_ascii = False
+
+                    if is_ascii:
+                        text = image_bytes.decode('ascii', errors='ignore')
+                        if len(text.strip()) > 0 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r' for c in text.strip()):
+                            # Assume it's already base64 text stored earlier; use as-is
+                            image_base64 = text.replace('\n', '').replace('\r', '')
+                        else:
+                            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    else:
+                        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+
+                    image_url = f"data:image/jpeg;base64,{image_base64}"
+                except Exception as img_err:
+                    print(f"[WARN] Failed to prepare image data for page {page_number}: {img_err}")
+                    image_url = None
             
             pages.append({
                 "id": str(page_id),
@@ -2235,7 +2432,92 @@ async def get_document_pages(doc_id: str):
                 "extractedText": extracted_text or "",
                 "validated": False  # TODO: Add validation status to database
             })
-        
+
+        # If no pages found, dynamically render from original PDF as a resilience fallback
+        if len(pages) == 0:
+            try:
+                # Get original file_path
+                cursor.execute("SELECT file_path, total_pages FROM documents WHERE id = %s", (doc_id,))
+                doc_row = cursor.fetchone()
+                file_path = doc_row[0] if doc_row else None
+                if not file_path or not Path(file_path).exists():
+                    cursor.close()
+                    conn.close()
+                    return pages
+
+                # Try PyMuPDF first
+                rendered_any = False
+                try:
+                    import fitz  # PyMuPDF
+                    pdf_doc = fitz.open(file_path)
+                    for page_num in range(len(pdf_doc)):
+                        page = pdf_doc.load_page(page_num)
+                        mat = fitz.Matrix(2, 2)
+                        pix = None
+                        if hasattr(page, 'get_pixmap'):
+                            pix = getattr(page, 'get_pixmap')(matrix=mat)
+                        elif hasattr(page, 'getPixmap'):
+                            pix = getattr(page, 'getPixmap')(matrix=mat)
+                        else:
+                            pix = getattr(page, 'get_pixmap')() if hasattr(page, 'get_pixmap') else getattr(page, 'getPixmap')()
+                        img_bytes = pix.tobytes("jpeg")
+                        # Save for future requests
+                        cursor.execute(
+                            """
+                            INSERT INTO pages (id, document_id, page_number, page_type, image_data, processing_status, created_at)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (document_id, page_number) DO UPDATE SET image_data = EXCLUDED.image_data
+                            """,
+                            (str(uuid.uuid4()), doc_id, page_num + 1, 'standard', img_bytes, 'completed', datetime.now())
+                        )
+                        import base64
+                        image_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                        pages.append({
+                            "id": None,
+                            "pageNumber": page_num + 1,
+                            "imageUrl": f"data:image/jpeg;base64,{image_base64}",
+                            "extractedText": "",
+                            "validated": False
+                        })
+                        rendered_any = True
+                    pdf_doc.close()
+                except Exception:
+                    rendered_any = False
+
+                # Fallback to pdf2image if PyMuPDF path failed
+                if not rendered_any:
+                    try:
+                        from pdf2image import convert_from_path
+                        import io, base64
+                        images = convert_from_path(file_path, dpi=150, fmt='JPEG')
+                        for idx, page_image in enumerate(images, 1):
+                            buf = io.BytesIO()
+                            page_image.save(buf, format='JPEG', quality=85)
+                            img_bytes = buf.getvalue()
+                            cursor.execute(
+                                """
+                                INSERT INTO pages (id, document_id, page_number, page_type, image_data, processing_status, created_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (document_id, page_number) DO UPDATE SET image_data = EXCLUDED.image_data
+                                """,
+                                (str(uuid.uuid4()), doc_id, idx, 'standard', img_bytes, 'completed', datetime.now())
+                            )
+                            image_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                            pages.append({
+                                "id": None,
+                                "pageNumber": idx,
+                                "imageUrl": f"data:image/jpeg;base64,{image_base64}",
+                                "extractedText": "",
+                                "validated": False
+                            })
+                    except Exception:
+                        # If all rendering fails, return empty pages gracefully
+                        pass
+
+                conn.commit()
+            except Exception as gen_err:
+                print(f"[WARN] Dynamic page generation failed for {doc_id}: {gen_err}")
+
         cursor.close()
         conn.close()
         
