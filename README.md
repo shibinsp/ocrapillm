@@ -46,8 +46,8 @@ pip install -r requirements.txt
 - Mistral API key is pre-configured in the system
 - **Stagewise Extension**: Multi-environment support for development, staging, and production:
   1. Environment files are automatically created: `.env`, `.env.staging`, `.env.production`
-  2. Use deployment scripts: `deploy.bat` (Windows) or `deploy.ps1` (PowerShell)
-  3. See `STAGEWISE_SETUP.md` for detailed configuration guide
+  2. Use deployment scripts: `scripts/deploy.bat` (Windows) or `scripts/deploy.ps1` (PowerShell)
+  3. See `docs/STAGEWISE_SETUP.md` for detailed configuration guide
 - **Sentry Setup (Optional)**: For error monitoring and performance tracking:
   1. Create a Sentry account at [sentry.io](https://sentry.io)
   2. Create a new project for your application
@@ -66,18 +66,18 @@ npm install
 ### Quick Start (Recommended)
 ```bash
 # Use the automated startup script
-start_application.bat
+scripts/start_application.bat
 ```
 
 ### Stagewise Deployment
 ```bash
 # Set up environment (development/staging/production)
-deploy.bat development
+scripts/deploy.bat development
 # or
-.\deploy.ps1 staging
+scripts/deploy.ps1 staging
 
 # Then start the application
-start_application.bat
+scripts/start_application.bat
 ```
 
 ### Manual Start
@@ -118,10 +118,14 @@ ocrapillm/
 ├── .env                                # Development environment config
 ├── .env.staging                        # Staging environment config
 ├── .env.production                     # Production environment config
-├── deploy.bat                          # Windows deployment script
-├── deploy.ps1                          # PowerShell deployment script
-├── start_application.bat               # Application startup script
-├── STAGEWISE_SETUP.md                  # Stagewise extension documentation
+├── scripts/
+│   ├── deploy.bat                      # Windows deployment script
+│   ├── deploy.ps1                      # PowerShell deployment script
+│   ├── start_application.bat           # Application startup script
+│   └── database_migration.py           # Database migration utility
+├── docs/
+│   ├── STAGEWISE_SETUP.md              # Stagewise extension documentation
+│   └── DATABASE_SETUP.md               # Database setup guide
 └── README.md
 ```
 

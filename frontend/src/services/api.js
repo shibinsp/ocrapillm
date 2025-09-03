@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8001';
+// Use relative path for production deployment with NGINX proxy
+// In development, you can override this with REACT_APP_API_BASE_URL environment variable
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
 
 // Create axios instance with default config
 const api = axios.create({

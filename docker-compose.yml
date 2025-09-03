@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ocr_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ocr_database}
+      POSTGRES_USER: ${DB_USER:-ocr_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ocr_password}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - ocr_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ocr_user} -d ${DB_NAME:-ocr_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ocr_backend
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-ocr_database}
+      - DB_USER=${DB_USER:-ocr_user}
+      - DB_PASSWORD=${DB_PASSWORD:-ocr_password}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - GOOGLE_VISION_API_KEY=${GOOGLE_VISION_API_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/outputs:/app/outputs
+      - ./backend/processing_logs:/app/processing_logs
+    ports:
+      - "8000:8000"
+    networks:
+      - ocr_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  ocr_network:
+    driver: bridge

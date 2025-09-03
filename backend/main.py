@@ -131,13 +131,13 @@ else:
 
 # Import OCR engine class with error handling
 try:
-    from ocr_engine_clean import DatabaseOCR
+    from ocr_llm_engine import DatabaseOCR
     logger.info("[OK] OCR engine imported successfully")
-    # Initialize OCR processor without immediate database connection
-    ocr_processor = DatabaseOCR(api_key="eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH", init_db=False)
+    # Initialize OCR processor
+    ocr_processor = DatabaseOCR(api_key="eyFSYGAUfsrrDmDVLGaKac5IQmFy1gEH")
     logger.info("[OK] OCR engine initialized successfully")
 except Exception as e:
-    logger.error(f"Warning: Could not import ocr_engine_clean: {e}. OCR functionality will be limited.")
+    logger.error(f"Warning: Could not import ocr_llm_engine: {e}. OCR functionality will be limited.")
     ocr_processor = None
     DatabaseOCR = None
 
@@ -211,10 +211,28 @@ async def error_handling_middleware(request: Request, call_next):
             }
         )
 
-# CORS middleware
+# CORS middleware - support both development and production
+allowed_origins = [
+    "http://localhost:3000",  # React dev server
+    "http://localhost:3001",  # Alternative React dev port
+]
+
+# Add production origins from environment variables
+if os.getenv("FRONTEND_URL"):
+    allowed_origins.append(os.getenv("FRONTEND_URL"))
+if os.getenv("PRODUCTION_DOMAIN"):
+    allowed_origins.extend([
+        f"https://{os.getenv('PRODUCTION_DOMAIN')}",
+        f"http://{os.getenv('PRODUCTION_DOMAIN')}"
+    ])
+
+# For aaPanel deployment, allow all origins if in production mode
+if os.getenv("ENVIRONMENT") == "production" and os.getenv("ALLOW_ALL_ORIGINS") == "true":
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # React dev server
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -2280,5 +2298,5 @@ async def validate_page(doc_id: str, page_id: str, data: ValidateText):
         raise HTTPException(status_code=500, detail=f"Failed to validate page: {str(e)}")
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn985
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
