@@ -5,7 +5,8 @@ conn = psycopg2.connect(
     port=5432,
     database='LLMAPI',
     user='postgres',
-    password='shibin'
+    # password='shibin'
+    password='sai'
 )
 cursor = conn.cursor()
 cursor.execute("SELECT id, filename FROM documents WHERE id::text LIKE 'task_%';")
