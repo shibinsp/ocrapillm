@@ -9,9 +9,11 @@ const Sidebar = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
-  const filteredDocuments = documents.filter(doc =>
-    doc.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const notProcessing = doc.status !== 'processing'; // Hide processing documents
+    return matchesSearch && notProcessing;
+  });
 
   const handleDocumentSelect = (document) => {
     actions.setCurrentDocument(document);
@@ -22,8 +24,19 @@ const Sidebar = () => {
       const fallbackText = 'This is a sample document for testing purposes.\n\nYou can edit this text and test the save functionality.\n\nThe OCR system would normally extract text from uploaded PDF documents.';
       actions.setExtractedText(fallbackText);
     } else {
-      // Load document content and chat history for real documents
-      // This would typically trigger API calls to load the document data
+      // Load document content for real documents
+      loadDocumentContent(document.id);
+    }
+  };
+
+  const loadDocumentContent = async (documentId) => {
+    try {
+      const content = await apiService.getDocumentContent(documentId);
+      // The API returns the text directly in the 'text' field
+      actions.setExtractedText(content.text || content || '');
+    } catch (error) {
+      console.error('Failed to load document content:', error);
+      actions.showError('Failed to load document content');
     }
   };
 
@@ -43,8 +56,6 @@ const Sidebar = () => {
     switch (status) {
       case 'completed':
         return <FiCheck className="w-4 h-4 text-green-500" />;
-      case 'processing':
-        return <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />;
       case 'error':
         return <FiAlertCircle className="w-4 h-4 text-red-500" />;
       default:

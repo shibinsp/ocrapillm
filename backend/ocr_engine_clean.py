@@ -132,7 +132,7 @@ class DatabaseOCR:
                     mime_type VARCHAR(100) DEFAULT 'application/pdf',
                     upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     processing_status VARCHAR(50) DEFAULT 'pending' 
-                        CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+                        CHECK (processing_status IN ('pending', 'completed', 'failed')),
                     total_pages INTEGER CHECK (total_pages >= 0),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -149,7 +149,7 @@ class DatabaseOCR:
                         CHECK (page_type IN ('text', 'diagram', 'arc', 'mixed')),
                     image_data BYTEA,
                     processing_status VARCHAR(50) DEFAULT 'pending' 
-                        CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+                        CHECK (processing_status IN ('pending', 'completed', 'failed')),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(document_id, page_number)

@@ -267,7 +267,7 @@ const ValidationPage = ({ documentId, onClose }) => {
             <div className="p-4 h-full flex justify-center">
               <div className="w-full">
                 <textarea
-                  value={extractedText}
+                  value={typeof extractedText === 'string' ? extractedText : (extractedText || '').toString()}
                   onChange={(e) => handleTextChange(e.target.value)}
                   className="w-full h-[600px] resize-none border border-gray-300 dark:border-gray-600 rounded-lg p-4 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg"
                   style={{ minHeight: '600px', aspectRatio: '210/297' }}

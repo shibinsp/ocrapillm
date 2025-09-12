@@ -5,19 +5,21 @@ import App from './App';
 import { AppProvider } from './context/AppContext';
 import { Toaster } from 'react-hot-toast';
 
-// Sentry configuration
-import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
+// Sentry configuration (disabled for development)
+// import * as Sentry from '@sentry/react';
+// import { BrowserTracing } from '@sentry/tracing';
 
-// Initialize Sentry
-Sentry.init({
-  dsn: process.env.REACT_APP_SENTRY_DSN || 'https://ac81b3ddf471ac69ae20a2a822e794ab@o4509915357184000.ingest.de.sentry.io/4509925486493776',
-  integrations: [
-    new BrowserTracing(),
-  ],
-  tracesSampleRate: 1.0,
-  environment: process.env.NODE_ENV || 'development',
-});
+// Initialize Sentry (disabled to prevent connection errors)
+// Sentry.init({
+//   dsn: process.env.REACT_APP_SENTRY_DSN || 'https://ac81b3ddf471ac69ae20a2a822e794ab@o4509915357184000.ingest.de.sentry.io/4509925486493776',
+//   integrations: [
+//     new BrowserTracing(),
+//   ],
+//   tracesSampleRate: 1.0,
+//   environment: process.env.NODE_ENV || 'development',
+// });
+
+console.log('Sentry monitoring disabled for development');
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

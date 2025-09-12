@@ -93,6 +93,24 @@ function App() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [activeTab, currentDocument, sidebarOpen, actions]);
+  // Load document content when switching to editor tab
+  useEffect(() => {
+    const loadDocumentContentIfNeeded = async () => {
+      if (activeTab === 'editor' && currentDocument && !state.extractedText) {
+        try {
+          console.log('Loading document content for editor tab:', currentDocument.id);
+          const content = await apiService.getDocumentContent(currentDocument.id);
+          actions.setExtractedText(content.text || content || '');
+        } catch (error) {
+          console.error('Failed to load document content:', error);
+          actions.showError('Failed to load document content');
+        }
+      }
+    };
+    
+    loadDocumentContentIfNeeded();
+  }, [activeTab, currentDocument, state.extractedText]);
+
   const renderMainContent = () => {
     if (isUploading || isProcessing) {
       return <ProcessingView />;

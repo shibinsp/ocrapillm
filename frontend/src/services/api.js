@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://localhost:8001';
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8001';
+// const API_BASE_URL = 'http://localhost:8000';
 
 
 // Create axios instance with default config
@@ -112,9 +112,11 @@ export const apiService = {
 
   // Poll task status until completion
   pollTaskStatus: async (taskId, onProgress) => {
-    const pollInterval = 2000; // 2 seconds
-    const maxAttempts = 150; // 5 minutes max (150 * 2s)
+    const initialInterval = 2000; // Start with 2 seconds
+    const maxInterval = 10000; // Max 10 seconds between polls
+    const maxAttempts = 300; // 10 minutes max with exponential backoff
     let attempts = 0;
+    let currentInterval = initialInterval;
 
     return new Promise((resolve, reject) => {
       const poll = async () => {
@@ -127,21 +129,64 @@ export const apiService = {
           }
 
           if (status.status === 'completed') {
+            // Verify status consistency before resolving
+            try {
+              if (status.result && status.result.document_id) {
+                const verification = await apiService.verifyDocumentStatus(status.result.document_id);
+                if (!verification.consistent) {
+                  console.warn('Status inconsistency detected:', verification.discrepancies);
+                }
+              }
+            } catch (verifyError) {
+              console.warn('Status verification failed:', verifyError);
+            }
             resolve(status.result);
           } else if (status.status === 'failed') {
             reject(new Error(status.error || 'Task failed'));
           } else if (attempts >= maxAttempts) {
-            reject(new Error('Task timeout - processing took too long'));
+            reject(new Error('Task timeout - processing took too long. Please check the document status manually.'));
           } else {
-            // Continue polling
-            setTimeout(poll, pollInterval);
+            // Exponential backoff: increase interval gradually
+            if (attempts > 30) { // After 1 minute, start backing off
+              currentInterval = Math.min(currentInterval * 1.2, maxInterval);
+            }
+            setTimeout(poll, currentInterval);
           }
         } catch (error) {
-          reject(error);
+          // Retry on network errors, but fail on other errors
+          if (attempts < 3 && (error.code === 'NETWORK_ERROR' || error.response?.status >= 500)) {
+            setTimeout(poll, currentInterval);
+          } else {
+            reject(error);
+          }
         }
       };
 
       poll();
+    });
+  },
+
+  // Verify document status consistency
+  verifyDocumentStatus: async (documentId) => {
+    return await retryRequest(async () => {
+      const response = await api.get(`/documents/${documentId}/verify-status`);
+      return response.data;
+    });
+  },
+
+  // Recover stuck document status
+  recoverDocumentStatus: async (documentId) => {
+    return await retryRequest(async () => {
+      const response = await api.post(`/documents/${documentId}/recover`);
+      return response.data;
+    });
+  },
+
+  // Force complete stuck document
+  forceCompleteDocument: async (documentId) => {
+    return await retryRequest(async () => {
+      const response = await api.post(`/documents/${documentId}/force-complete`);
+      return response.data;
     });
   },
 

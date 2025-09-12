@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { apiService, formatFileSize } from '../services/api';
-import { FiFile, FiTrash2, FiDownload, FiEye, FiSearch, FiFilter, FiCalendar, FiCheck, FiClock, FiAlertCircle, FiEdit3 } from 'react-icons/fi';
+import { FiFile, FiTrash2, FiDownload, FiEye, FiSearch, FiFilter, FiCalendar, FiCheck, FiClock, FiAlertCircle, FiEdit3, FiRefreshCw } from 'react-icons/fi';
 
 const DocumentList = () => {
   const { state, actions } = useApp();
@@ -9,16 +9,89 @@ const DocumentList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date'); // date, name, size, status
   const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
-  const [filterStatus, setFilterStatus] = useState('completed'); // all, completed, error
+  const [filterStatus, setFilterStatus] = useState('all'); // all, completed, error - Changed default to 'all'
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+
+  // Refresh documents when component mounts
+  useEffect(() => {
+    refreshDocuments();
+  }, []); // Only run once on mount
+
+  const refreshDocuments = async () => {
+    try {
+      const response = await apiService.getDocuments();
+      actions.setDocuments(response.data || response);
+    } catch (error) {
+      console.error('Failed to refresh documents:', error);
+      actions.showError('Failed to refresh documents');
+    }
+  };
+
+  const handleCheckStatus = async (documentId) => {
+    try {
+      actions.showInfo('Checking and recovering document status...');
+      
+      // Try to recover the document status first
+      const recovery = await apiService.recoverDocumentStatus(documentId);
+      
+      if (recovery.success) {
+        if (recovery.new_status === 'completed') {
+          actions.showSuccess(`Document recovered! Status updated to ${recovery.new_status}`);
+          
+          // Update the document in the local state immediately
+          const updatedDocuments = documents.map(doc => 
+            doc.id === documentId 
+              ? { ...doc, status: 'completed' }
+              : doc
+          );
+          actions.setDocuments(updatedDocuments);
+        } else {
+          actions.showSuccess(recovery.message);
+        }
+      } else {
+        // If regular recovery failed, try force-complete as fallback
+        actions.showInfo('Regular recovery failed, attempting force completion...');
+        
+        try {
+          const forceComplete = await apiService.forceCompleteDocument(documentId);
+          
+          if (forceComplete.success) {
+            actions.showSuccess(`Document force-completed! Status: ${forceComplete.new_status}`);
+            
+            // Update the document in the local state immediately
+            const updatedDocuments = documents.map(doc => 
+              doc.id === documentId 
+                ? { ...doc, status: 'completed' }
+                : doc
+            );
+            actions.setDocuments(updatedDocuments);
+          } else {
+            actions.showError(forceComplete.message || 'Force completion failed');
+          }
+        } catch (forceError) {
+          console.error('Force completion failed:', forceError);
+          actions.showError('Both recovery methods failed. Document may need manual intervention.');
+        }
+      }
+      
+      // Refresh the documents list to get latest status from server
+      await refreshDocuments();
+      
+    } catch (error) {
+      console.error('Failed to recover document status:', error);
+      actions.showError('Failed to recover document status');
+    }
+  };
 
   // Filter and sort documents
   const filteredAndSortedDocuments = React.useMemo(() => {
     let filtered = documents.filter(doc => {
       const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = filterStatus === 'all' || doc.status === filterStatus;
-      return matchesSearch && matchesStatus;
+      const notProcessing = doc.status !== 'processing'; // Hide processing documents
+      return matchesSearch && matchesStatus && notProcessing;
     });
 
     filtered.sort((a, b) => {
@@ -71,7 +144,8 @@ const DocumentList = () => {
       }
 
       const content = await apiService.getDocumentContent(documentId);
-      actions.setExtractedText(content.text);
+      // The API returns the text directly in the 'text' field
+      actions.setExtractedText(content.text || content || '');
     } catch (error) {
       console.error('Failed to load document content:', error);
       actions.showError('Failed to load document content');
@@ -135,8 +209,6 @@ const DocumentList = () => {
     switch (status) {
       case 'completed':
         return <FiCheck className="w-4 h-4 text-green-500" />;
-      case 'processing':
-        return <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />;
       case 'error':
         return <FiAlertCircle className="w-4 h-4 text-red-500" />;
       default:
@@ -147,7 +219,6 @@ const DocumentList = () => {
   const getStatusBadge = (status) => {
     const styles = {
       completed: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-      processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
       error: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
     };
@@ -209,8 +280,8 @@ const DocumentList = () => {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="pl-10 pr-8 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
               >
-                <option value="completed">Completed</option>
                 <option value="all">All Status</option>
+                <option value="completed">Completed</option>
                 <option value="error">Error</option>
                 <option value="pending">Pending</option>
               </select>
@@ -369,6 +440,9 @@ const DocumentList = () => {
                         <FiEdit3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </button>
                     )}
+
+
+
 
                     <div className="relative group">
                       <button className="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors">

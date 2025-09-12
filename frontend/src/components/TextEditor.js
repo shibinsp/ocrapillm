@@ -23,9 +23,11 @@ const TextEditor = () => {
 
   // Update word and character count
   useEffect(() => {
-    const words = extractedText.trim().split(/\s+/).filter(word => word.length > 0);
+    // Ensure extractedText is a string
+    const textContent = typeof extractedText === 'string' ? extractedText : (extractedText || '').toString();
+    const words = textContent.trim().split(/\s+/).filter(word => word.length > 0);
     setWordCount(words.length);
-    setCharCount(extractedText.length);
+    setCharCount(textContent.length);
   }, [extractedText]);
 
   // Auto-save functionality
@@ -135,9 +137,10 @@ const TextEditor = () => {
 
   // Search functionality
   useEffect(() => {
-    if (searchTerm && extractedText) {
+    const textContent = typeof extractedText === 'string' ? extractedText : (extractedText || '').toString();
+    if (searchTerm && textContent) {
       const regex = new RegExp(searchTerm, 'gi');
-      const matches = [...extractedText.matchAll(regex)];
+      const matches = [...textContent.matchAll(regex)];
       setSearchResults(matches.map(match => match.index));
       setCurrentSearchIndex(matches.length > 0 ? 0 : -1);
     } else {
@@ -173,7 +176,8 @@ const TextEditor = () => {
       const position = searchResults[newIndex];
       textarea.focus();
       textarea.setSelectionRange(position, position + searchTerm.length);
-      textarea.scrollTop = (position / extractedText.length) * textarea.scrollHeight;
+      const textContent = typeof extractedText === 'string' ? extractedText : (extractedText || '').toString();
+      textarea.scrollTop = (position / textContent.length) * textarea.scrollHeight;
     }
   };
 
@@ -186,9 +190,10 @@ const TextEditor = () => {
     
     setIsSaving(true);
     try {
+      const textContent = typeof extractedText === 'string' ? extractedText : (extractedText || '').toString();
       console.log('Saving document:', {
         documentId: currentDocument.id,
-        textLength: extractedText.length,
+        textLength: textContent.length,
         isModified: isTextModified
       });
       
@@ -231,11 +236,12 @@ const TextEditor = () => {
         actions.showError(`Save failed: ${errorMessage}`);
         
         // For debugging: log the full error
+        const textContent = typeof extractedText === 'string' ? extractedText : (extractedText || '').toString();
         console.error('Full save error details:', {
           originalError: error,
           fallbackError,
           documentId: currentDocument.id,
-          textLength: extractedText.length
+          textLength: textContent.length
         });
       }
     } finally {
@@ -602,7 +608,7 @@ const TextEditor = () => {
               <div className="p-4">
                 <textarea
                   ref={textareaRef}
-                  value={extractedText}
+                  value={typeof extractedText === 'string' ? extractedText : (extractedText || '').toString()}
                   onChange={(e) => actions.updateText(e.target.value)}
                   className="w-full h-[600px] p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm leading-relaxed"
                   style={{ minHeight: '600px', aspectRatio: '210/297' }}

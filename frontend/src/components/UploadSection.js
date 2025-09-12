@@ -74,6 +74,8 @@ const UploadSection = () => {
         progress: 10
       });
       
+      // Process document in background without showing processing status
+      
       // Poll for task completion and get real extracted text
       const result = await apiService.pollTaskStatus(
         response.task_id,
@@ -82,7 +84,7 @@ const UploadSection = () => {
           let progressPercent = status.progress || 0;
           let statusMessage = 'Processing document...';
           
-          if (status.status === 'processing') {
+          if (status.status === 'uploaded') {
             if (progressPercent < 25) {
               statusMessage = 'Analyzing document structure...';
             } else if (progressPercent < 50) {
@@ -105,29 +107,26 @@ const UploadSection = () => {
         }
       );
       
-      // Create document object with real extracted text
-      const newDocument = {
+      // Check if result is valid
+      if (!result || !result.document_id) {
+        throw new Error('Invalid upload response: missing document_id');
+      }
+
+      // Create completed document and add to list
+      const completedDocument = {
         id: result.document_id,
         name: selectedFile.name,
         size: selectedFile.size,
-        status: 'completed',
+        status: result.status || 'completed',
         created_at: new Date().toISOString(),
         pages: result.pages || 1,
         extracted_text: result.extracted_text || ''
       };
       
-      // Add to documents and set as current
-      actions.addDocument(newDocument);
-      actions.setCurrentDocument(newDocument);
-      actions.setExtractedText(newDocument.extracted_text);
-      
-      // Refresh documents list from backend to ensure consistency
-      try {
-        const documents = await apiService.getDocuments();
-        actions.setDocuments(documents.data || documents);
-      } catch (error) {
-        console.warn('Failed to refresh documents list:', error);
-      }
+      // Add the completed document to the list
+      actions.addDocument(completedDocument);
+      actions.setCurrentDocument(completedDocument);
+      actions.setExtractedText(completedDocument.extracted_text);
       
       // Reset states
       actions.setUploading(false);
@@ -138,6 +137,8 @@ const UploadSection = () => {
       setSelectedFile(null);
       actions.setActiveTab('editor');
       actions.showSuccess('Document processed successfully!');
+      
+      // The real-time monitoring is already running and will handle final updates
       
     } catch (error) {
       console.error('Upload error:', error);
@@ -156,7 +157,7 @@ const UploadSection = () => {
                       `Server error: ${error.response.status}`;
       } else if (error.request) {
         // Network error
-        errorMessage = 'Network error: Please check your connection and ensure the backend server is running on port 8000';
+        errorMessage = 'Network error: Please check your connection and ensure the backend server is running on port 8001';
       } else {
         // Other error
         errorMessage = error.message || 'Unknown error occurred';

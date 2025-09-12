@@ -608,7 +608,7 @@ class DatabaseOCR:
             return {"success": False, "error": "Failed to convert PDF to images. Check poppler-utils installation."}
 
         # Update document with total pages
-        self.update_document_status(document_id, 'processing', len(images))
+        self.update_document_status(document_id, 'completed', len(images))
         self.log_processing_step(document_id, None, 'pdf_conversion', 'completed', f"Converted {len(images)} pages")
 
         # Extract text from each page

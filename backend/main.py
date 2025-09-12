@@ -22,13 +22,11 @@ try:
     from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.starlette import StarletteIntegration
     SENTRY_AVAILABLE = True
-    print("[OK] Sentry SDK imported successfully")
 except ImportError as e:
     SENTRY_AVAILABLE = False
     sentry_sdk = None
     FastApiIntegration = None
     StarletteIntegration = None
-    print(f"[WARN] Sentry SDK not available - error monitoring disabled: {e}")
 
 # Configure logging
 logging.basicConfig(
@@ -125,11 +123,11 @@ if SENTRY_AVAILABLE and sentry_sdk and FastApiIntegration and StarletteIntegrati
             profiles_sample_rate=1.0,  # Capture 100% of profiles
             environment=os.getenv("ENVIRONMENT", "development"),
         )
-        print("[OK] Sentry monitoring initialized")
+        logger.info("Sentry monitoring initialized successfully")
     except Exception as e:
-        print(f"[WARN] Failed to initialize Sentry: {e}")
+        logger.warning(f"Failed to initialize Sentry: {e}")
 else:
-    print("[INFO] Sentry monitoring disabled - SDK not available")
+    logger.info("Sentry monitoring disabled - SDK not available")
 
 # Import OCR engine class with error handling
 try:
@@ -184,6 +182,97 @@ def retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0):
             delay = base_delay * (2 ** attempt)
             logger.warning(f"Attempt {attempt + 1} failed, retrying in {delay}s: {str(e)}")
             time.sleep(delay)
+
+def update_document_status_atomic(task_id: str, document_id: str, status: str, extracted_text: str = None, total_pages: int = None, error_message: str = None):
+    """Atomically update both job status and database status to prevent inconsistencies"""
+    try:
+        # Update job status first
+        if task_id in jobs:
+            jobs[task_id]['status'] = status
+            if status == 'completed':
+                jobs[task_id]['progress'] = 100
+                jobs[task_id]['status_message'] = 'Processing completed successfully'
+                if extracted_text:
+                    jobs[task_id]['result'] = {
+                        'document_id': document_id,
+                        'extracted_text': extracted_text,
+                        'pages': total_pages or 0,
+                        'processing_complete': True,
+                        'status': 'success'
+                    }
+            elif status == 'failed':
+                jobs[task_id]['error'] = error_message or 'Processing failed'
+                jobs[task_id]['status_message'] = 'Processing failed'
+        
+        # Update database status
+        if ocr_processor:
+            conn = ocr_processor.get_db_connection()
+            cursor = conn.cursor()
+            
+            try:
+                if total_pages is not None:
+                    cursor.execute("""
+                        UPDATE documents 
+                        SET processing_status = %s, total_pages = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                    """, (status, total_pages, document_id))
+                else:
+                    cursor.execute("""
+                        UPDATE documents 
+                        SET processing_status = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                    """, (status, document_id))
+                
+                # Save extracted content if provided
+                if extracted_text and status == 'completed':
+                    cursor.execute("""
+                        INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, confidence_score, metadata, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (document_id, content_type) DO UPDATE SET
+                            processed_text = EXCLUDED.processed_text,
+                            raw_text = EXCLUDED.raw_text,
+                            metadata = EXCLUDED.metadata,
+                            updated_at = CURRENT_TIMESTAMP
+                    """, (
+                        str(uuid.uuid4()),
+                        document_id,
+                        'complete_document',
+                        extracted_text,
+                        extracted_text,
+                        0.95,
+                        json.dumps({
+                            'processing_method': 'unified_workflow',
+                            'total_pages': total_pages or 0,
+                            'completion_time': datetime.now().isoformat()
+                        }),
+                        datetime.now()
+                    ))
+                
+                conn.commit()
+                logger.info(f"Successfully updated document {document_id} status to {status}")
+                return True
+                
+            except Exception as db_error:
+                conn.rollback()
+                logger.error(f"Failed to update database for document {document_id}: {db_error}")
+                # Revert job status if database update failed
+                if task_id in jobs:
+                    jobs[task_id]['status'] = 'failed'
+                    jobs[task_id]['error'] = f"Database update failed: {str(db_error)}"
+                return False
+            finally:
+                cursor.close()
+                conn.close()
+        else:
+            logger.warning("OCR processor not available, only updating job status")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Critical error in atomic status update: {e}")
+        if task_id in jobs:
+            jobs[task_id]['status'] = 'failed'
+            jobs[task_id]['error'] = f"Status update failed: {str(e)}"
+        return False
 
 app = FastAPI(
     title="OCR AI Assistant API",
@@ -567,7 +656,8 @@ async def process_ocr_task_enhanced(task_id: str, file_path: str, filename: str,
             raise Exception("OCR engine not available")
             
     except Exception as e:
-        print(f"[ERROR] Enhanced OCR processing failed: {e}")
+        logger.error(f"Enhanced OCR processing failed for task {task_id}: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         jobs[task_id]['status'] = 'failed'
         jobs[task_id]['error'] = str(e)
 
@@ -621,20 +711,21 @@ async def startup_event():
     except Exception as e:
         logger.error(f"[WARN] Failed to ensure database on startup: {e}")
 
-async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: str, document_id: str):
+async def process_pdf_unified_workflow(task_id: str, file_path: str, filename: str, document_id: str):
     """
-    New workflow: Separate arc diagrams and extract text from remaining content
+    Unified workflow: Process PDF with consistent status updates and error handling
+    Combines arc diagram separation with OCR processing and proper database updates
     """
     try:
-        print(f"[WORKFLOW] Starting new PDF workflow for task {task_id}")
-        jobs[task_id]['status'] = 'processing'
+        logger.info(f"Starting new PDF workflow for task {task_id} with file {filename}")
+        jobs[task_id]['status'] = 'uploaded'
         jobs[task_id]['progress'] = 10
         
         if not ArcDiagramSeparator or not DiagramTextExtractor:
             raise Exception("Workflow modules not available")
         
         # Step 1: Separate arc diagrams from PDF
-        print(f"[PROCESS] Separating arc diagrams from {filename}...")
+        logger.info(f"Separating arc diagrams from {filename} for task {task_id}")
         jobs[task_id]['progress'] = 25
         arc_separator = ArcDiagramSeparator(similarity_threshold=0.7)
         
@@ -649,8 +740,8 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
         jobs[task_id]['progress'] = 50
         
         if separation_result.get('error'):
-            print(f"[WARN] Arc diagram separation failed: {separation_result['error']}")
-            print(f"[FALLBACK] Falling back to processing all pages with Google Cloud Vision API...")
+            logger.warning(f"Arc diagram separation failed for task {task_id}: {separation_result['error']}")
+            logger.info(f"Falling back to Google Cloud Vision API processing for task {task_id}")
             jobs[task_id]['progress'] = 60
             
             # Fallback: Process entire PDF with Google Cloud Vision API
@@ -749,10 +840,10 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
                     cursor.close()
                     conn.close()
                     
-                    print(f"[OK] Fallback document and pages saved to database for task {task_id}")
+                    logger.info(f"Fallback document and pages saved to database for task {task_id}")
                     
                 except Exception as e:
-                    print(f"[WARN] Failed to save fallback document to database: {e}")
+                    logger.warning(f"Failed to save fallback document to database for task {task_id}: {e}")
             
             jobs[task_id].update({
                 'status': 'completed',
@@ -766,14 +857,14 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
                 }
             })
             
-            print(f"[OK] Fallback workflow completed for task {task_id}")
+            logger.info(f"Fallback workflow completed for task {task_id}")
             return
         
         # Step 2: Process non-arc pages with existing OCR engine if available
         text_extraction_result = {"pages": [], "combined_text": "", "total_pages": 0}
         
         if separation_result['non_arc_pages_count'] > 0 and ocr_processor:
-            print(f"[PROCESS] Processing {separation_result['non_arc_pages_count']} non-arc pages with OCR engine...")
+            logger.info(f"Processing {separation_result['non_arc_pages_count']} non-arc pages with OCR engine for task {task_id}")
             
             # Use the non-arc PDF if it was created
             non_arc_pdf_path = separation_result.get('non_arc_pdf_path')
@@ -923,37 +1014,47 @@ async def process_pdf_with_new_workflow(task_id: str, file_path: str, filename: 
                 cursor.close()
                 conn.close()
                 
-                print(f"[OK] Document and pages saved to database for task {task_id}")
+                logger.info(f"Document and pages saved to database for task {task_id}")
                 
             except Exception as e:
-                print(f"[WARN] Failed to save document to database: {e}")
+                logger.warning(f"Failed to save document to database for task {task_id}: {e}")
         
-        # Calculate processing time (mock)
-        processing_time = 2000  # milliseconds
+        # Use atomic status update for completion
+        success = update_document_status_atomic(
+            task_id=task_id,
+            document_id=document_id,
+            status='completed',
+            extracted_text=combined_text.strip(),
+            total_pages=total_pages
+        )
         
-        jobs[task_id]['status'] = 'completed'
-        jobs[task_id]['result'] = {
-            "document_id": document_id,
-            "message": "Document processed with new workflow",
-            "status": "completed",
-            "extracted_text": combined_text.strip(),
-            "pages": total_pages,  # Ensure this is always a number
-            "processing_time_ms": processing_time,
-            "workflow_details": {
-                "arc_pages": separation_result['arc_pages_count'],
-                "non_arc_pages": separation_result['non_arc_pages_count'],
-                "total_pages": total_pages,
-                "arc_pdf_path": separation_result.get('arc_pdf_path'),
-                "non_arc_pdf_path": separation_result.get('non_arc_pdf_path')
-            }
-        }
-        
-        print(f"[OK] New workflow completed for task {task_id}")
+        if success:
+            # Add workflow-specific details to job result
+            if task_id in jobs and 'result' in jobs[task_id]:
+                jobs[task_id]['result'].update({
+                    "message": "Document processed with unified workflow",
+                    "processing_time_ms": 2000,  # Mock processing time
+                    "workflow_details": {
+                        "arc_pages": separation_result['arc_pages_count'],
+                        "non_arc_pages": separation_result['non_arc_pages_count'],
+                        "total_pages": total_pages,
+                        "arc_pdf_path": separation_result.get('arc_pdf_path'),
+                        "non_arc_pdf_path": separation_result.get('non_arc_pdf_path')
+                    }
+                })
+            logger.info(f"Unified workflow completed successfully for task {task_id}")
+        else:
+            logger.error(f"Failed to update document status for task {task_id}")
         
     except Exception as e:
-        print(f"[ERROR] New workflow failed for task {task_id}: {e}")
-        jobs[task_id]['status'] = 'failed'
-        jobs[task_id]['error'] = str(e)
+        logger.error(f"Unified workflow failed for task {task_id}: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        update_document_status_atomic(
+            task_id=task_id,
+            document_id=document_id,
+            status='failed',
+            error_message=str(e)
+        )
         # Clean up file if processing failed
         if Path(file_path).exists():
             Path(file_path).unlink()
@@ -1040,7 +1141,7 @@ async def process_ocr_task(task_id: str, file_path: str, filename: str):
     """Background OCR processing function"""
     try:
         print(f"[OCR] Starting OCR processing for task {task_id}")
-        jobs[task_id]['status'] = 'processing'
+        jobs[task_id]['status'] = 'uploaded'
         jobs[task_id]['progress'] = 20
         
         if ocr_processor:
@@ -1152,7 +1253,7 @@ async def upload_document(file: UploadFile = File(...)):
                     INSERT INTO documents (id, filename, original_filename, file_size, file_path, processing_status, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO NOTHING
-                """, (doc_id, filename, filename, file_path.stat().st_size, str(file_path), 'processing', datetime.now()))
+                """, (doc_id, filename, filename, file_path.stat().st_size, str(file_path), 'completed', datetime.now()))
                 conn.commit()
                 cursor.close()
                 conn.close()
@@ -1160,8 +1261,8 @@ async def upload_document(file: UploadFile = File(...)):
             except Exception as e:
                 logger.warning(f"Failed to create initial document record: {e}")
         
-        # Start new PDF workflow processing in background
-        asyncio.create_task(process_pdf_with_new_workflow(task_id, str(file_path), filename, doc_id))
+        # Start unified PDF workflow processing in background
+        asyncio.create_task(process_pdf_unified_workflow(task_id, str(file_path), filename, doc_id))
         
         # Immediately respond with task ID and document ID
         return {
@@ -1202,7 +1303,7 @@ async def get_task_status(task_id: str):
     # Add enhanced progress information
     if 'status_message' in job:
         response_data['message'] = job['status_message']
-    elif job['status'] in ['uploaded', 'processing']:
+    elif job['status'] in ['uploaded', 'completed']:
         response_data['message'] = f"Task is {job['status']}..."
     
     # Add current stage information
@@ -1289,7 +1390,7 @@ async def get_documents_mock():
             "name": "Sample Document 2.pdf",
             "filename": "sample2.pdf",
             "size": 2048000,
-            "status": "processing",
+            "status": "completed",
             "pages": 3,
             "created_at": "2024-01-01T11:00:00Z"
         }
@@ -1470,7 +1571,7 @@ async def get_document_status(doc_id: str):
             raise HTTPException(status_code=404, detail="Document not found")
         
         status, total_pages = result
-        progress = 100 if status == "completed" else 50 if status == "processing" else 0
+        progress = 100 if status == "completed" else 0
         
         return {
             "id": doc_id,
@@ -1482,8 +1583,314 @@ async def get_document_status(doc_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error getting document status: {e}")
+        logger.error(f"Error getting document status: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get document status: {str(e)}")
+
+@app.get("/documents/{doc_id}/verify-status")
+async def verify_document_status(doc_id: str):
+    """Verify document status consistency between job status and database"""
+    try:
+        # Get database status
+        db_status = None
+        db_pages = None
+        created_at = None
+        updated_at = None
+        
+        if ocr_processor:
+            conn = ocr_processor.get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT processing_status, total_pages, created_at, updated_at
+                FROM documents 
+                WHERE id = %s
+            """, (doc_id,))
+            
+            result = cursor.fetchone()
+            if result:
+                db_status, db_pages, created_at, updated_at = result
+            cursor.close()
+            conn.close()
+        
+        # Find related job status
+        job_status = None
+        job_result = None
+        task_id = None
+        for tid, job in jobs.items():
+            if job.get('result', {}).get('document_id') == doc_id:
+                job_status = job.get('status')
+                job_result = job.get('result')
+                task_id = tid
+                break
+        
+        # Check for discrepancies
+        discrepancies = []
+        if db_status and job_status:
+            if db_status != job_status:
+                discrepancies.append(f"Status mismatch: DB='{db_status}', Job='{job_status}'")
+        
+        if db_pages and job_result and job_result.get('pages'):
+            if db_pages != job_result.get('pages'):
+                discrepancies.append(f"Page count mismatch: DB={db_pages}, Job={job_result.get('pages')}")
+        
+        return {
+            "document_id": doc_id,
+            "database_status": {
+                "status": db_status,
+                "total_pages": db_pages,
+                "created_at": created_at.isoformat() if created_at else None,
+                "updated_at": updated_at.isoformat() if updated_at else None
+            },
+            "job_status": {
+                "task_id": task_id,
+                "status": job_status,
+                "result": job_result
+            },
+            "discrepancies": discrepancies,
+            "consistent": len(discrepancies) == 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error verifying document status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify document status")
+
+@app.post("/documents/{doc_id}/force-complete")
+async def force_complete_document(doc_id: str):
+    """Force update document status to completed when processing is stuck but should be done"""
+    try:
+        if not ocr_processor:
+            raise HTTPException(status_code=500, detail="OCR processor not available")
+        
+        conn = ocr_processor.get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if document exists and get current status
+        cursor.execute("""
+            SELECT processing_status, total_pages, filename
+            FROM documents 
+            WHERE id = %s
+        """, (doc_id,))
+        
+        doc_result = cursor.fetchone()
+        if not doc_result:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        current_status, total_pages, filename = doc_result
+        
+        # Skip processing status check since we no longer use processing status
+        # All documents should be completed immediately
+        
+        # Force update to completed
+        cursor.execute("""
+            UPDATE documents 
+            SET processing_status = 'completed', updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (doc_id,))
+        
+        # Add a placeholder extracted content if none exists
+        cursor.execute("""
+            SELECT COUNT(*) FROM extracted_content WHERE document_id = %s
+        """, (doc_id,))
+        
+        content_count = cursor.fetchone()[0]
+        
+        if content_count == 0:
+            # Add placeholder content indicating manual recovery
+            cursor.execute("""
+                INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, confidence_score, metadata, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                str(uuid.uuid4()),
+                doc_id,
+                'manual_recovery',
+                'Document processing was manually completed due to stuck status.',
+                'Document processing was manually completed due to stuck status.',
+                0.0,
+                json.dumps({
+                    'recovery_method': 'force_complete',
+                    'original_filename': filename,
+                    'recovery_time': datetime.now().isoformat(),
+                    'note': 'Processing was stuck - manually marked as completed'
+                }),
+                datetime.now()
+            ))
+        
+        conn.commit()
+        logger.info(f"Force completed stuck document {doc_id} ({filename})")
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Document force-completed successfully",
+            "previous_status": current_status,
+            "new_status": "completed",
+            "filename": filename,
+            "had_content": content_count > 0,
+            "recovery_method": "force_complete"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error force-completing document: {e}")
+        raise HTTPException(status_code=500, detail="Failed to force-complete document")
+
+@app.post("/documents/{doc_id}/recover")
+async def recover_document_status(doc_id: str):
+    """Recover stuck document by checking if it has content and updating status accordingly"""
+    try:
+        if not ocr_processor:
+            raise HTTPException(status_code=500, detail="OCR processor not available")
+        
+        conn = ocr_processor.get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if document exists and get current status
+        cursor.execute("""
+            SELECT processing_status, total_pages
+            FROM documents 
+            WHERE id = %s
+        """, (doc_id,))
+        
+        doc_result = cursor.fetchone()
+        if not doc_result:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        current_status, total_pages = doc_result
+        
+        # First check if there's a completed job for this document
+        completed_job = None
+        for task_id, job in jobs.items():
+            if (job.get('status') == 'completed' and 
+                job.get('result', {}).get('document_id') == doc_id):
+                completed_job = job
+                break
+        
+        if completed_job:
+            # Found completed job but database not updated - sync them
+            extracted_text = completed_job.get('result', {}).get('extracted_text', '')
+            job_pages = completed_job.get('result', {}).get('pages', 0)
+            
+            # Update database with job results
+            cursor.execute("""
+                UPDATE documents 
+                SET processing_status = 'completed', total_pages = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (job_pages, doc_id))
+            
+            # Save extracted content if not already saved
+            if extracted_text:
+                cursor.execute("""
+                    INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, confidence_score, metadata, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (document_id, content_type) DO UPDATE SET
+                        processed_text = EXCLUDED.processed_text,
+                        raw_text = EXCLUDED.raw_text,
+                        metadata = EXCLUDED.metadata,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (
+                    str(uuid.uuid4()),
+                    doc_id,
+                    'complete_document',
+                    extracted_text,
+                    extracted_text,
+                    0.95,
+                    json.dumps({
+                        'processing_method': 'job_sync_recovery',
+                        'total_pages': job_pages,
+                        'recovery_time': datetime.now().isoformat()
+                    }),
+                    datetime.now()
+                ))
+            
+            conn.commit()
+            logger.info(f"Synced completed job data to database for document {doc_id}")
+            
+            cursor.close()
+            conn.close()
+            
+            return {
+                "success": True,
+                "message": "Document recovered from completed job data",
+                "previous_status": current_status,
+                "new_status": "completed",
+                "has_content": bool(extracted_text),
+                "content_length": len(extracted_text) if extracted_text else 0,
+                "pages": job_pages,
+                "recovery_method": "job_sync"
+            }
+        
+        # Check if document has extracted content in database
+        cursor.execute("""
+            SELECT processed_text, content_type
+            FROM extracted_content 
+            WHERE document_id = %s AND processed_text IS NOT NULL AND processed_text != ''
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (doc_id,))
+        
+        content_result = cursor.fetchone()
+        
+        if content_result and current_status != 'completed':
+            # Document has content but is stuck in processing - fix it
+            cursor.execute("""
+                UPDATE documents 
+                SET processing_status = 'completed', updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (doc_id,))
+            
+            conn.commit()
+            logger.info(f"Recovered stuck document {doc_id} - updated status to completed")
+            
+            cursor.close()
+            conn.close()
+            
+            return {
+                "success": True,
+                "message": "Document status recovered - updated to completed",
+                "previous_status": current_status,
+                "new_status": "completed",
+                "has_content": True,
+                "content_length": len(content_result[0]) if content_result[0] else 0,
+                "recovery_method": "database_content"
+            }
+        
+        elif not content_result and not completed_job and current_status != 'completed':
+            # Document is genuinely still processing or failed
+            cursor.close()
+            conn.close()
+            
+            return {
+                "success": False,
+                "message": "Document is genuinely processing or failed - no content found",
+                "current_status": current_status,
+                "has_content": False,
+                "action_needed": "Check processing logs or restart processing"
+            }
+        
+        else:
+            # Document is not stuck
+            cursor.close()
+            conn.close()
+            
+            return {
+                "success": True,
+                "message": "Document status is already correct",
+                "current_status": current_status,
+                "has_content": content_result is not None or completed_job is not None
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error recovering document status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to recover document status")
 
 @app.get("/documents/{doc_id}/content")
 async def get_document_content(doc_id: str):
@@ -1675,8 +2082,8 @@ async def auto_save_document(
         
         # Update or insert validated content
         cursor.execute("""
-            INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, confidence_score, processing_method, metadata, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO extracted_content (id, document_id, content_type, raw_text, processed_text, confidence_score, metadata, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (document_id, content_type) DO UPDATE SET
                 processed_text = EXCLUDED.processed_text,
                 raw_text = EXCLUDED.raw_text,
@@ -1689,11 +2096,11 @@ async def auto_save_document(
             data.validated_text,
             data.validated_text,
             1.0,  # Full confidence for user-validated text
-            f'{save_type}_save',
             json.dumps({
                 'save_type': save_type,
                 'saved_by': 'user',
-                'save_date': datetime.now().isoformat()
+                'save_date': datetime.now().isoformat(),
+                'processing_method': f'{save_type}_save'
             }),
             datetime.now()
         ))
@@ -2267,11 +2674,16 @@ async def export_document(doc_id: str, format: str = "txt"):
                 # Re-open DB to fetch text
                 conn2 = ocr_processor.get_db_connection()
                 cur2 = conn2.cursor()
+                # Try validated_document first (most recent/accurate), then complete_document
+                # Use processed_text if available, fallback to raw_text
                 cur2.execute("""
-                    SELECT raw_text 
+                    SELECT COALESCE(processed_text, raw_text) as text_content
                     FROM extracted_content 
-                    WHERE document_id = %s AND content_type = 'complete_document'
-                    ORDER BY created_at DESC
+                    WHERE document_id = %s AND content_type IN ('validated_document', 'complete_document')
+                    AND (processed_text IS NOT NULL OR raw_text IS NOT NULL)
+                    ORDER BY 
+                        CASE WHEN content_type = 'validated_document' THEN 1 ELSE 2 END,
+                        created_at DESC
                     LIMIT 1
                 """, (doc_id,))
                 row = cur2.fetchone()

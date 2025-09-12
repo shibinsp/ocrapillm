@@ -72,6 +72,17 @@ const appReducer = (state, action) => {
         currentDocument: action.payload
       };
     
+    case 'UPDATE_DOCUMENT':
+      return {
+        ...state,
+        documents: state.documents.map(doc => 
+          doc.id === action.payload.id ? { ...doc, ...action.payload } : doc
+        ),
+        currentDocument: state.currentDocument?.id === action.payload.id 
+          ? { ...state.currentDocument, ...action.payload } 
+          : state.currentDocument
+      };
+    
     case 'SET_CURRENT_DOCUMENT':
       return { ...state, currentDocument: action.payload };
     
@@ -191,6 +202,7 @@ export const AppProvider = ({ children }) => {
     
     setDocuments: (documents) => dispatch({ type: 'SET_DOCUMENTS', payload: documents }),
     addDocument: (document) => dispatch({ type: 'ADD_DOCUMENT', payload: document }),
+    updateDocument: (document) => dispatch({ type: 'UPDATE_DOCUMENT', payload: document }),
     setCurrentDocument: (document) => dispatch({ type: 'SET_CURRENT_DOCUMENT', payload: document }),
     deleteDocument: (documentId) => dispatch({ type: 'DELETE_DOCUMENT', payload: documentId }),
     
